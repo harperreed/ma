@@ -13,4 +13,10 @@ final class QueueServiceTests: XCTestCase {
         XCTAssertTrue(service.upcomingTracks.isEmpty)
         XCTAssertNil(service.queueId)
     }
+
+    @MainActor
+    func testClientInjection() async {
+        let service = QueueService(client: nil)
+        XCTAssertNotNil(service)
+    }
 }

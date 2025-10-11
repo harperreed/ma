@@ -22,4 +22,18 @@ final class PlayerServiceTests: XCTestCase {
         XCTAssertEqual(service.progress, 0.0)
         XCTAssertNil(service.selectedPlayer)
     }
+
+    @MainActor
+    func testConnectionState() async {
+        let service = PlayerService(client: nil)
+
+        XCTAssertEqual(service.connectionState, .disconnected)
+    }
+
+    @MainActor
+    func testClientInjection() async {
+        // Mock client would go here - for now just test that it accepts optional client
+        let service = PlayerService(client: nil)
+        XCTAssertNotNil(service)
+    }
 }
