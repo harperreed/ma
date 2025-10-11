@@ -1,17 +1,49 @@
 // ABOUTME: Main entry point for Music Assistant Player macOS application
-// ABOUTME: Initializes SwiftUI app lifecycle and main window
+// ABOUTME: Manages client lifecycle and server configuration flow
 
 import SwiftUI
+import MusicAssistantKit
 
 @main
 struct MusicAssistantPlayerApp: App {
+    @State private var serverConfig: ServerConfig? = ServerConfig.load()
+    @State private var client: MusicAssistantClient?
+    @State private var showSetup: Bool = false
+
     var body: some Scene {
         WindowGroup {
-            MainWindowView()
+            Group {
+                if let config = serverConfig, let client = client {
+                    MainWindowView(client: client, serverConfig: config)
+                } else {
+                    ServerSetupView { config in
+                        self.serverConfig = config
+                        handleConnection(config: config)
+                    }
+                }
+            }
+            .onAppear {
+                if let config = serverConfig {
+                    handleConnection(config: config)
+                }
+            }
         }
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
+        }
+    }
+
+    private func handleConnection(config: ServerConfig) {
+        let newClient = MusicAssistantClient(host: config.host, port: config.port)
+        self.client = newClient
+
+        Task {
+            do {
+                try await newClient.connect()
+            } catch {
+                print("Connection failed: \(error)")
+            }
         }
     }
 }

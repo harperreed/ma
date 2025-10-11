@@ -1,14 +1,31 @@
 // ABOUTME: Main window layout composing sidebar, now playing, and queue views
-// ABOUTME: Three-column Roon-inspired layout with service injection
+// ABOUTME: Three-column Roon-inspired layout with service injection and client management
 
 import SwiftUI
+import MusicAssistantKit
 
 struct MainWindowView: View {
-    @StateObject private var playerService = PlayerService()
-    @StateObject private var queueService = QueueService()
+    let client: MusicAssistantClient
+    let serverConfig: ServerConfig
+
+    @StateObject private var playerService: PlayerService
+    @StateObject private var queueService: QueueService
 
     @State private var selectedPlayer: Player?
     @State private var availablePlayers: [Player] = []
+
+    init(client: MusicAssistantClient, serverConfig: ServerConfig) {
+        self.client = client
+        self.serverConfig = serverConfig
+
+        let playerSvc = PlayerService(client: client)
+        playerSvc.setServerHost(serverConfig.host)
+        _playerService = StateObject(wrappedValue: playerSvc)
+
+        let queueSvc = QueueService(client: client)
+        queueSvc.setServerHost(serverConfig.host)
+        _queueService = StateObject(wrappedValue: queueSvc)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -33,28 +50,21 @@ struct MainWindowView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
+        .task {
+            await fetchInitialData()
+        }
+    }
+
+    private func fetchInitialData() async {
+        // Fetch players
+        // Will implement in next task
     }
 }
 
 #Preview {
-    let playerService = PlayerService()
-    playerService.currentTrack = Track(
-        id: "1",
-        title: "Bohemian Rhapsody",
-        artist: "Queen",
-        album: "A Night at the Opera",
-        duration: 354.0,
-        artworkURL: nil
-    )
-    playerService.playbackState = .playing
-    playerService.progress = 120.0
+    let config = ServerConfig(host: "192.168.200.113", port: 8095)
+    let client = MusicAssistantClient(host: config.host, port: config.port)
 
-    let queueService = QueueService()
-    queueService.upcomingTracks = [
-        Track(id: "2", title: "We Will Rock You", artist: "Queen", album: "News of the World", duration: 122.0, artworkURL: nil),
-        Track(id: "3", title: "We Are the Champions", artist: "Queen", album: "News of the World", duration: 179.0, artworkURL: nil)
-    ]
-
-    return MainWindowView()
+    return MainWindowView(client: client, serverConfig: config)
         .frame(width: 1200, height: 800)
 }
