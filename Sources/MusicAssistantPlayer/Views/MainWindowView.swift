@@ -32,9 +32,17 @@ struct MainWindowView: View {
             // Sidebar
             SidebarView(
                 selectedPlayer: $selectedPlayer,
-                availablePlayers: availablePlayers
+                availablePlayers: availablePlayers,
+                connectionState: playerService.connectionState,
+                serverHost: serverConfig.host,
+                onRetry: handleRetry
             )
             .frame(width: 220)
+            .onChange(of: selectedPlayer) { oldValue, newValue in
+                if let player = newValue {
+                    handlePlayerSelection(player)
+                }
+            }
 
             // Now Playing (center hero)
             NowPlayingView(
@@ -56,8 +64,48 @@ struct MainWindowView: View {
     }
 
     private func fetchInitialData() async {
-        // Fetch players
-        // Will implement in next task
+        do {
+            // Fetch players
+            if let result = try await client.getPlayers() {
+                let players = PlayerMapper.parsePlayers(from: result)
+
+                await MainActor.run {
+                    self.availablePlayers = players
+
+                    // Auto-select first active player
+                    if let firstActive = players.first(where: { $0.isActive }) {
+                        self.selectedPlayer = firstActive
+                        self.playerService.selectedPlayer = firstActive
+                    } else if let first = players.first {
+                        self.selectedPlayer = first
+                        self.playerService.selectedPlayer = first
+                    }
+
+                    // Fetch queue for selected player
+                    if let player = selectedPlayer {
+                        Task {
+                            try? await queueService.fetchQueue(for: player.id)
+                        }
+                    }
+                }
+            }
+        } catch {
+            print("Failed to fetch players: \(error)")
+        }
+    }
+
+    private func handlePlayerSelection(_ player: Player) {
+        playerService.selectedPlayer = player
+
+        Task {
+            try? await queueService.fetchQueue(for: player.id)
+        }
+    }
+
+    private func handleRetry() {
+        Task {
+            await fetchInitialData()
+        }
     }
 }
 
