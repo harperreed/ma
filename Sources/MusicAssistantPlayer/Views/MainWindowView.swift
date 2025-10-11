@@ -33,43 +33,28 @@ struct MainWindowView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
-        .onAppear {
-            loadMockData()
-        }
-    }
-
-    // Temporary mock data for UI testing
-    private func loadMockData() {
-        // Mock players
-        availablePlayers = [
-            Player(id: "kitchen", name: "Kitchen Speaker", isActive: true),
-            Player(id: "bedroom", name: "Bedroom", isActive: false)
-        ]
-        selectedPlayer = availablePlayers.first
-
-        // Mock current track
-        playerService.currentTrack = Track(
-            id: "1",
-            title: "Bohemian Rhapsody",
-            artist: "Queen",
-            album: "A Night at the Opera",
-            duration: 354.0,
-            artworkURL: nil
-        )
-        playerService.playbackState = .playing
-        playerService.progress = 120.0
-        playerService.selectedPlayer = availablePlayers.first
-
-        // Mock queue
-        queueService.upcomingTracks = [
-            Track(id: "2", title: "We Will Rock You", artist: "Queen", album: "News of the World", duration: 122.0, artworkURL: nil),
-            Track(id: "3", title: "We Are the Champions", artist: "Queen", album: "News of the World", duration: 179.0, artworkURL: nil),
-            Track(id: "4", title: "Another One Bites the Dust", artist: "Queen", album: "The Game", duration: 215.0, artworkURL: nil)
-        ]
     }
 }
 
 #Preview {
-    MainWindowView()
+    let playerService = PlayerService()
+    playerService.currentTrack = Track(
+        id: "1",
+        title: "Bohemian Rhapsody",
+        artist: "Queen",
+        album: "A Night at the Opera",
+        duration: 354.0,
+        artworkURL: nil
+    )
+    playerService.playbackState = .playing
+    playerService.progress = 120.0
+
+    let queueService = QueueService()
+    queueService.upcomingTracks = [
+        Track(id: "2", title: "We Will Rock You", artist: "Queen", album: "News of the World", duration: 122.0, artworkURL: nil),
+        Track(id: "3", title: "We Are the Champions", artist: "Queen", album: "News of the World", duration: 179.0, artworkURL: nil)
+    ]
+
+    return MainWindowView()
         .frame(width: 1200, height: 800)
 }
