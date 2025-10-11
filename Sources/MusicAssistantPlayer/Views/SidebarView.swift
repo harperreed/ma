@@ -6,6 +6,9 @@ import SwiftUI
 struct SidebarView: View {
     @Binding var selectedPlayer: Player?
     let availablePlayers: [Player]
+    let connectionState: ConnectionState
+    let serverHost: String
+    let onRetry: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -71,6 +74,15 @@ struct SidebarView: View {
             }
 
             Spacer()
+
+            // Connection status at bottom
+            ConnectionStatusView(
+                connectionState: connectionState,
+                serverHost: serverHost,
+                onRetry: onRetry
+            )
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(red: 0.06, green: 0.06, blue: 0.1))
@@ -110,7 +122,10 @@ struct SidebarItem: View {
             Player(id: "1", name: "Kitchen", isActive: true),
             Player(id: "2", name: "Bedroom", isActive: false),
             Player(id: "3", name: "Living Room", isActive: true)
-        ]
+        ],
+        connectionState: .connected,
+        serverHost: "192.168.200.113",
+        onRetry: {}
     )
     .frame(width: 220, height: 600)
 }
