@@ -15,6 +15,7 @@ class PlayerService: ObservableObject {
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
+    private var serverHost: String = "192.168.200.113"
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -25,7 +26,35 @@ class PlayerService: ObservableObject {
         guard let client = client else { return }
 
         // Subscribe to player update events
-        // Will implement event parsing in next task
+        Task { [weak self] in
+            guard let self = self else { return }
+
+            for await event in await client.events.playerUpdates.values {
+                await MainActor.run {
+                    // Only process events for selected player
+                    guard let selectedPlayer = self.selectedPlayer,
+                          event.playerId == selectedPlayer.id
+                    else {
+                        return
+                    }
+
+                    // Parse track
+                    if let track = EventParser.parseTrack(from: event.data, serverHost: self.serverHost) {
+                        self.currentTrack = track
+                    }
+
+                    // Parse playback state
+                    self.playbackState = EventParser.parsePlaybackState(from: event.data)
+
+                    // Parse progress
+                    self.progress = EventParser.parseProgress(from: event.data)
+                }
+            }
+        }
+    }
+
+    func setServerHost(_ host: String) {
+        self.serverHost = host
     }
 
     func play() async throws {
