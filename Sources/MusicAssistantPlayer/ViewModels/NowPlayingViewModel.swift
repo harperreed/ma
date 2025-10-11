@@ -42,18 +42,22 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func play() {
-        // Will implement with MusicAssistantKit integration
+        Task {
+            try? await playerService.play()
+        }
     }
 
     func pause() {
-        // Will implement with MusicAssistantKit integration
+        Task {
+            try? await playerService.pause()
+        }
     }
 
     func skipNext() {
-        // Will implement with MusicAssistantKit integration
+        // TODO: Implement when MusicAssistantKit adds next() method
     }
 
     func skipPrevious() {
-        // Will implement with MusicAssistantKit integration
+        // TODO: Implement when MusicAssistantKit adds previous() method
     }
 }

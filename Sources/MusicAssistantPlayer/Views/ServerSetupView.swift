@@ -2,6 +2,7 @@
 // ABOUTME: Allows user to enter server host/port and test connection
 
 import SwiftUI
+import MusicAssistantKit
 
 struct ServerSetupView: View {
     @State private var host: String = "192.168.200.113"
@@ -121,10 +122,11 @@ struct ServerSetupView: View {
         // Test connection
         Task {
             do {
-                // Give visual feedback
-                try await Task.sleep(for: .milliseconds(500))
+                // Actually test the connection
+                let testClient = MusicAssistantClient(host: host, port: portInt)
+                try await testClient.connect()
 
-                // If we get here, proceed
+                // Connection successful!
                 await MainActor.run {
                     connectionStatus = "Connected successfully!"
                     connectionSuccess = true
@@ -132,7 +134,12 @@ struct ServerSetupView: View {
                     // Save config
                     config.save()
 
-                    // Notify parent
+                    // Disconnect test client
+                    Task {
+                        await testClient.disconnect()
+                    }
+
+                    // Notify parent after brief delay for user feedback
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         onConnect(config)
                     }

@@ -18,13 +18,20 @@ struct MainWindowView: View {
         self.client = client
         self.serverConfig = serverConfig
 
+        // Create services
         let playerSvc = PlayerService(client: client)
-        playerSvc.setServerHost(serverConfig.host)
-        _playerService = StateObject(wrappedValue: playerSvc)
-
         let queueSvc = QueueService(client: client)
-        queueSvc.setServerHost(serverConfig.host)
+
+        // Initialize StateObjects
+        _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)
+
+        // Configure server host on services after StateObject initialization
+        // This is safe because services are MainActor-isolated
+        Task { @MainActor in
+            playerSvc.setServerHost(serverConfig.host)
+            queueSvc.setServerHost(serverConfig.host)
+        }
     }
 
     var body: some View {

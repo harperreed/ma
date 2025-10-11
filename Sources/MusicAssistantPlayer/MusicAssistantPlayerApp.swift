@@ -41,8 +41,14 @@ struct MusicAssistantPlayerApp: App {
         Task {
             do {
                 try await newClient.connect()
+                print("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
             } catch {
                 print("Connection failed: \(error)")
+                // Clear client on failure so user can retry
+                await MainActor.run {
+                    self.client = nil
+                    self.serverConfig = nil
+                }
             }
         }
     }

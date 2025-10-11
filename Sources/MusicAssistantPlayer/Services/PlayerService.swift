@@ -15,18 +15,44 @@ class PlayerService: ObservableObject {
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
+    private var eventTask: Task<Void, Never>?
     private var serverHost: String = "192.168.200.113"
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
         setupEventSubscriptions()
+        monitorConnection()
+    }
+
+    deinit {
+        eventTask?.cancel()
+    }
+
+    private func monitorConnection() {
+        guard let client = client else {
+            connectionState = .disconnected
+            return
+        }
+
+        Task {
+            // Check connection status periodically
+            connectionState = .connecting
+
+            // Wait a bit for initial connection
+            try? await Task.sleep(for: .seconds(2))
+
+            let isConnected = await client.isConnected
+            await MainActor.run {
+                self.connectionState = isConnected ? .connected : .error("Not connected")
+            }
+        }
     }
 
     private func setupEventSubscriptions() {
         guard let client = client else { return }
 
-        // Subscribe to player update events
-        Task { [weak self] in
+        // Subscribe to player update events and store the task
+        eventTask = Task { [weak self] in
             guard let self = self else { return }
 
             for await event in await client.events.playerUpdates.values {

@@ -12,6 +12,7 @@ class QueueService: ObservableObject {
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
+    private var eventTask: Task<Void, Never>?
     private var serverHost: String = "192.168.200.113"
 
     init(client: MusicAssistantClient? = nil) {
@@ -19,11 +20,15 @@ class QueueService: ObservableObject {
         setupEventSubscriptions()
     }
 
+    deinit {
+        eventTask?.cancel()
+    }
+
     private func setupEventSubscriptions() {
         guard let client = client else { return }
 
-        // Subscribe to queue update events
-        Task { [weak self] in
+        // Subscribe to queue update events and store the task
+        eventTask = Task { [weak self] in
             guard let self = self else { return }
 
             for await event in await client.events.queueUpdates.values {
@@ -47,16 +52,24 @@ class QueueService: ObservableObject {
         self.queueId = playerId
 
         // Fetch queue items
-        if let result = try await client.getQueueItems(queueId: playerId),
-           let items = result.value as? [String: Any]
-        {
-            let queueData = ["items": items]
-            let anyCodableData = queueData.mapValues { AnyCodable($0) }
-
-            self.upcomingTracks = EventParser.parseQueueItems(
-                from: anyCodableData,
-                serverHost: serverHost
-            )
+        if let result = try await client.getQueueItems(queueId: playerId) {
+            // The result could be in different formats, try both
+            if let itemsDict = result.value as? [String: Any] {
+                // If it's already a dictionary with "items" key
+                let anyCodableData = itemsDict.mapValues { AnyCodable($0) }
+                self.upcomingTracks = EventParser.parseQueueItems(
+                    from: anyCodableData,
+                    serverHost: serverHost
+                )
+            } else if let itemsArray = result.value as? [[String: Any]] {
+                // If it's directly an array of items
+                let queueData = ["items": itemsArray]
+                let anyCodableData = queueData.mapValues { AnyCodable($0) }
+                self.upcomingTracks = EventParser.parseQueueItems(
+                    from: anyCodableData,
+                    serverHost: serverHost
+                )
+            }
         }
     }
 
