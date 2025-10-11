@@ -7,10 +7,11 @@ import SwiftUI
 struct MusicAssistantPlayerApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("Music Assistant Player")
-                .frame(minWidth: 1200, minHeight: 800)
+            MainWindowView()
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .commands {
+            CommandGroup(replacing: .newItem) { }
+        }
     }
 }
