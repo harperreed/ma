@@ -18,6 +18,9 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - Sources/MusicAssistantPlayer
+      - path: Resources
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: MusicAssistantKit
     settings:
@@ -31,6 +34,7 @@ targets:
         CODE_SIGN_STYLE: Manual
         INFOPLIST_FILE: Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ICON_FILE: AppIcon.icns
         ENABLE_HARDENED_RUNTIME: YES
         COMBINE_HIDPI_IMAGES: YES
 

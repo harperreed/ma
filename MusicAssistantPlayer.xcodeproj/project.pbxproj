@@ -18,6 +18,7 @@
 		4D996DFE21B3C57FD24F2214 /* MusicAssistantPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7573AFA22B95DCEF7D914C /* MusicAssistantPlayerApp.swift */; };
 		51E9909B2FF4655B94500E12 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3F3F58BA8558A1784EAAF4 /* PlayerControlsView.swift */; };
 		6A3D3632BA73C3136E61F10E /* ConnectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0C4D8CCB8DCD91A70BA6C /* ConnectionState.swift */; };
+		6F0A6686BDEAFF21080B1F27 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = 0F16BC039F0CD41BB07781EE /* Resources */; };
 		70153287B4448E24A8941FF1 /* NowPlayingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC92CCCCC2D560A4B8D2C38E /* NowPlayingViewModel.swift */; };
 		753E92A7FDDBAA5479759F85 /* QueueViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DD19240241A2A8DC9209F9 /* QueueViewModel.swift */; };
 		7851A9BFE23A1B4E8437D966 /* EventParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADE0F855F6D352A6F4B0B89 /* EventParserTests.swift */; };
@@ -51,6 +52,7 @@
 /* Begin PBXFileReference section */
 		05D18259DC01006D16AF9B56 /* ConnectionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusView.swift; sourceTree = "<group>"; };
 		0D9225584978C01CA1BCC1B9 /* EventParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventParser.swift; sourceTree = "<group>"; };
+		0F16BC039F0CD41BB07781EE /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = SOURCE_ROOT; };
 		22D040080F927338979A60D9 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		2D325F940E968BA9B0DFCD43 /* ServerConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigTests.swift; sourceTree = "<group>"; };
 		36DD19240241A2A8DC9209F9 /* QueueViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueViewModel.swift; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 		57CE069BF042EA48BFA52B32 = {
 			isa = PBXGroup;
 			children = (
+				0F16BC039F0CD41BB07781EE /* Resources */,
 				549F120971E452DC974318F6 /* MusicAssistantPlayer */,
 				0B5CF2EE5CF9A7617BF10C1D /* MusicAssistantPlayerTests */,
 				E566E66D907F428C404F12F7 /* Products */,
@@ -245,6 +248,7 @@
 			buildConfigurationList = 56B7BA904F0D39454C38ACE3 /* Build configuration list for PBXNativeTarget "MusicAssistantPlayer" */;
 			buildPhases = (
 				797B487D9EFC04938100A549 /* Sources */,
+				D5984243DCC3AFF7AE44B325 /* Resources */,
 				55F726F59A5980879AE003B5 /* Frameworks */,
 			);
 			buildRules = (
@@ -296,6 +300,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D5984243DCC3AFF7AE44B325 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6F0A6686BDEAFF21080B1F27 /* Resources in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		797B487D9EFC04938100A549 /* Sources */ = {
@@ -448,6 +463,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
+				ICON_FILE = AppIcon.icns;
 				INFOPLIST_FILE = Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -533,6 +549,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
+				ICON_FILE = AppIcon.icns;
 				INFOPLIST_FILE = Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
