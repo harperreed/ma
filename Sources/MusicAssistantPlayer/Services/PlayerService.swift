@@ -49,7 +49,9 @@ class PlayerService: ObservableObject {
     }
 
     private func setupEventSubscriptions() {
-        guard let client = client else { return }
+        guard let client = client else {
+            return
+        }
 
         // Subscribe to player update events and store the task
         eventTask = Task { [weak self] in
@@ -59,8 +61,7 @@ class PlayerService: ObservableObject {
                 await MainActor.run {
                     // Only process events for selected player
                     guard let selectedPlayer = self.selectedPlayer,
-                          event.playerId == selectedPlayer.id
-                    else {
+                          event.playerId == selectedPlayer.id else {
                         return
                     }
 
@@ -81,6 +82,49 @@ class PlayerService: ObservableObject {
 
     func setServerHost(_ host: String) {
         self.serverHost = host
+    }
+
+    func fetchPlayerState(for playerId: String) async {
+        guard let client = client else {
+            print("⚠️ [PlayerService] No client to fetch player state")
+            return
+        }
+
+        do {
+            // Get all players and find the specific one
+            if let result = try await client.getPlayers() {
+                // Parse as array of player dictionaries
+                guard let playersArray = result.value as? [[String: Any]] else {
+                    return
+                }
+
+                // Find our specific player
+                guard let playerData = playersArray.first(where: { dict in
+                    let id = dict["player_id"] as? String ?? dict["id"] as? String
+                    return id == playerId
+                }) else {
+                    return
+                }
+
+                // Convert to AnyCodable dictionary for EventParser
+                let anyCodableData = playerData.mapValues { AnyCodable($0) }
+
+                // Parse track
+                if let track = EventParser.parseTrack(from: anyCodableData, serverHost: serverHost) {
+                    currentTrack = track
+                } else {
+                    currentTrack = nil
+                }
+
+                // Parse playback state
+                playbackState = EventParser.parsePlaybackState(from: anyCodableData)
+
+                // Parse progress
+                progress = EventParser.parseProgress(from: anyCodableData)
+            }
+        } catch {
+            print("❌ [PlayerService] Failed to fetch player state: \(error)")
+        }
     }
 
     func play() async throws {

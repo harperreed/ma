@@ -13,6 +13,7 @@ struct MainWindowView: View {
 
     @State private var selectedPlayer: Player?
     @State private var availablePlayers: [Player] = []
+    @State private var playerUpdateTask: Task<Void, Never>?
 
     init(client: MusicAssistantClient, serverConfig: ServerConfig) {
         self.client = client
@@ -67,6 +68,10 @@ struct MainWindowView: View {
         .background(Color.black)
         .task {
             await fetchInitialData()
+            subscribeToPlayerUpdates()
+        }
+        .onDisappear {
+            playerUpdateTask?.cancel()
         }
     }
 
@@ -88,9 +93,10 @@ struct MainWindowView: View {
                         self.playerService.selectedPlayer = first
                     }
 
-                    // Fetch queue for selected player
+                    // Fetch initial state and queue for selected player
                     if let player = selectedPlayer {
                         Task {
+                            await playerService.fetchPlayerState(for: player.id)
                             try? await queueService.fetchQueue(for: player.id)
                         }
                     }
@@ -105,6 +111,10 @@ struct MainWindowView: View {
         playerService.selectedPlayer = player
 
         Task {
+            // Fetch initial player state
+            await playerService.fetchPlayerState(for: player.id)
+
+            // Fetch queue
             try? await queueService.fetchQueue(for: player.id)
         }
     }
@@ -112,6 +122,38 @@ struct MainWindowView: View {
     private func handleRetry() {
         Task {
             await fetchInitialData()
+        }
+    }
+
+    private func subscribeToPlayerUpdates() {
+        playerUpdateTask = Task { @MainActor in
+            // Subscribe to player update events
+            for await _ in await client.events.playerUpdates.values {
+                // When any player updates, refresh the player list
+                // This catches sync/unsync changes, power state changes, etc.
+                await refreshPlayerList()
+            }
+        }
+    }
+
+    private func refreshPlayerList() async {
+        do {
+            if let result = try await client.getPlayers() {
+                let players = PlayerMapper.parsePlayers(from: result)
+
+                await MainActor.run {
+                    self.availablePlayers = players
+
+                    // Update selected player if it still exists
+                    if let currentlySelected = selectedPlayer,
+                       let updatedPlayer = players.first(where: { $0.id == currentlySelected.id }) {
+                        self.selectedPlayer = updatedPlayer
+                        self.playerService.selectedPlayer = updatedPlayer
+                    }
+                }
+            }
+        } catch {
+            print("Failed to refresh players: \(error)")
         }
     }
 }

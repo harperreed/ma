@@ -12,7 +12,7 @@ enum PlayerMapper {
             return nil
         }
 
-        let isActive = (data["state"] as? String) == "playing" || (data["powered"] as? Bool) == true
+        let isActive = (data["state"] as? String) == "playing"
 
         // Parse player type
         let typeString = data["type"] as? String ?? "player"

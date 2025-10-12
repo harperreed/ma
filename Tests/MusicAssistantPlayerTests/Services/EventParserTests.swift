@@ -8,12 +8,12 @@ import MusicAssistantKit
 final class EventParserTests: XCTestCase {
     func testParseTrackFromPlayerEvent() {
         let eventData: [String: AnyCodable] = [
-            "current_item": AnyCodable([
-                "name": "Bohemian Rhapsody",
+            "current_media": AnyCodable([
+                "title": "Bohemian Rhapsody",
                 "artist": "Queen",
                 "album": "A Night at the Opera",
-                "duration": 354.0,
-                "image": "/api/image/abc123"
+                "duration": 354,
+                "image_url": "https://example.com/album-art.jpg"
             ] as [String: Any])
         ]
 
@@ -23,7 +23,7 @@ final class EventParserTests: XCTestCase {
         XCTAssertEqual(track?.artist, "Queen")
         XCTAssertEqual(track?.album, "A Night at the Opera")
         XCTAssertEqual(track?.duration, 354.0)
-        XCTAssertEqual(track?.artworkURL?.absoluteString, "http://192.168.200.113:8095/api/image/abc123")
+        XCTAssertEqual(track?.artworkURL?.absoluteString, "https://example.com/album-art.jpg")
     }
 
     func testParsePlaybackState() {
