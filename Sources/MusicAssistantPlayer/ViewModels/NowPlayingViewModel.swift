@@ -67,9 +67,9 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func seek(to time: TimeInterval) {
-        // Local state update
-        progress = time
         // TODO: Call Music Assistant API when seek is supported
+        // For now, just log the attempt - don't update progress directly
+        // as it's bound to playerService and will be overwritten
         print("Seek to \(time) (not yet implemented in API)")
     }
 

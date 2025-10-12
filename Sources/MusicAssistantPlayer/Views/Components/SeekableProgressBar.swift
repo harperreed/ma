@@ -74,7 +74,8 @@ struct SeekableProgressBar: View {
 
     private func progressWidth(geometry: GeometryProxy) -> CGFloat {
         guard duration > 0 else { return 0 }
-        return geometry.size.width * CGFloat(displayProgress / duration)
+        let percent = min(max(displayProgress / duration, 0), 1.0)
+        return geometry.size.width * CGFloat(percent)
     }
 
     private func formatTime(_ time: TimeInterval) -> String {

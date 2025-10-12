@@ -6,6 +6,7 @@ import SwiftUI
 struct BlurredArtworkBackground: View {
     let artworkURL: URL?
     @State private var dominantColor: Color?
+    @State private var loadedImage: NSImage?
 
     var body: some View {
         ZStack {
@@ -18,6 +19,7 @@ struct BlurredArtworkBackground: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            .animation(.easeInOut(duration: 0.8), value: dominantColor)
 
             // Blurred artwork overlay
             if let url = artworkURL {
@@ -28,8 +30,9 @@ struct BlurredArtworkBackground: View {
                             .aspectRatio(contentMode: .fill)
                             .blur(radius: 70)
                             .opacity(0.4)
-                            .onAppear {
-                                extractColor(from: image)
+                            .transition(.opacity)
+                            .task {
+                                await extractColor(from: url)
                             }
                     }
                 }
@@ -39,15 +42,17 @@ struct BlurredArtworkBackground: View {
     }
 
     #if canImport(AppKit)
-    private func extractColor(from image: Image) {
-        // Convert SwiftUI Image to NSImage for color extraction
-        // This is a simplified approach - in production might cache colors
-        Task {
-            // Simulate color extraction delay
-            try? await Task.sleep(for: .milliseconds(100))
-            // In real implementation, would extract from NSImage
+    private func extractColor(from url: URL) async {
+        // Download and extract color from actual image
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let nsImage = NSImage(data: data) else {
+            return
+        }
+
+        let extractor = ColorExtractor()
+        if let color = extractor.extractDominantColor(from: nsImage) {
             await MainActor.run {
-                self.dominantColor = Color(red: 0.2, green: 0.15, blue: 0.25)
+                self.dominantColor = color
             }
         }
     }
