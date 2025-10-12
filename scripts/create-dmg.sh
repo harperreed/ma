@@ -49,6 +49,14 @@ fi
 # Make binary executable
 chmod +x "build/${APP_BUNDLE}/Contents/MacOS/MusicAssistantPlayer"
 
+# Remove quarantine attributes
+echo "🔓 Removing quarantine attributes..."
+/usr/bin/xattr -cr "build/${APP_BUNDLE}" 2>/dev/null || true
+
+# Ad-hoc sign the app (no certificate needed, just makes macOS happy)
+echo "✍️  Ad-hoc signing app..."
+codesign --force --deep --sign - "build/${APP_BUNDLE}"
+
 BUILT_APP="build/${APP_BUNDLE}"
 
 echo "✅ Built app at: $BUILT_APP"
