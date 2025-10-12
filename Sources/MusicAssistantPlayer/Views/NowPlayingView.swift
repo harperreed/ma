@@ -45,10 +45,19 @@ struct NowPlayingView: View {
                 isPlaying: viewModel.isPlaying,
                 progress: viewModel.progress,
                 duration: viewModel.duration,
+                volume: $viewModel.volume,
+                isShuffled: viewModel.isShuffled,
+                isLiked: viewModel.isLiked,
+                repeatIcon: viewModel.repeatMode.icon,
+                isRepeatActive: viewModel.repeatMode.isActive,
                 onPlay: viewModel.play,
                 onPause: viewModel.pause,
                 onSkipPrevious: viewModel.skipPrevious,
-                onSkipNext: viewModel.skipNext
+                onSkipNext: viewModel.skipNext,
+                onSeek: viewModel.seek,
+                onShuffle: viewModel.toggleShuffle,
+                onLike: viewModel.toggleLike,
+                onRepeat: viewModel.cycleRepeatMode
             )
             .frame(maxWidth: 500)
 

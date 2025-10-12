@@ -7,104 +7,142 @@ struct PlayerControlsView: View {
     let isPlaying: Bool
     let progress: TimeInterval
     let duration: TimeInterval
+    @Binding var volume: Double
+    let isShuffled: Bool
+    let isLiked: Bool
+    let repeatIcon: String
+    let isRepeatActive: Bool
+
     let onPlay: () -> Void
     let onPause: () -> Void
     let onSkipPrevious: () -> Void
     let onSkipNext: () -> Void
+    let onSeek: (TimeInterval) -> Void
+    let onShuffle: () -> Void
+    let onLike: () -> Void
+    let onRepeat: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
-            // Progress bar
-            VStack(spacing: 4) {
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        // Track background
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.white.opacity(0.2))
-                            .frame(height: 4)
-
-                        // Progress fill
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.white)
-                            .frame(width: progressWidth(geometry: geometry), height: 4)
-                    }
+            // Secondary controls (shuffle, like, repeat)
+            HStack {
+                Button(action: onShuffle) {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 20))
+                        .foregroundColor(isShuffled ? .white : .white.opacity(0.5))
                 }
-                .frame(height: 4)
+                .buttonStyle(.plain)
 
-                // Time labels
-                HStack {
-                    Text(formatTime(progress))
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    Spacer()
-                    Text(formatTime(duration))
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                Spacer()
+
+                Button(action: onLike) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .font(.system(size: 20))
+                        .foregroundColor(isLiked ? .red : .white.opacity(0.5))
                 }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button(action: onRepeat) {
+                    Image(systemName: repeatIcon)
+                        .font(.system(size: 20))
+                        .foregroundColor(isRepeatActive ? .white : .white.opacity(0.5))
+                }
+                .buttonStyle(.plain)
             }
+            .frame(maxWidth: 500)
+            .padding(.horizontal)
+
+            // Progress bar (seekable)
+            SeekableProgressBar(
+                progress: progress,
+                duration: duration,
+                onSeek: onSeek
+            )
+            .padding(.horizontal)
 
             // Transport controls
-            HStack(spacing: 32) {
+            HStack(spacing: 40) {
                 Button(action: onSkipPrevious) {
                     Image(systemName: "backward.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 28))
                         .foregroundColor(.white)
                 }
                 .buttonStyle(.plain)
 
                 Button(action: isPlaying ? onPause : onPlay) {
                     Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 56))
+                        .font(.system(size: 64))
                         .foregroundColor(.white)
                 }
                 .buttonStyle(.plain)
 
                 Button(action: onSkipNext) {
                     Image(systemName: "forward.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 28))
                         .foregroundColor(.white)
                 }
                 .buttonStyle(.plain)
             }
+
+            // Volume control
+            VolumeControl(volume: $volume)
         }
         .padding()
     }
 
-    private func progressWidth(geometry: GeometryProxy) -> CGFloat {
-        guard duration > 0 else { return 0 }
-        return geometry.size.width * CGFloat(progress / duration)
-    }
-
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
 }
 
 #Preview {
-    VStack(spacing: 40) {
-        PlayerControlsView(
-            isPlaying: false,
-            progress: 45,
-            duration: 180,
-            onPlay: {},
-            onPause: {},
-            onSkipPrevious: {},
-            onSkipNext: {}
-        )
+    struct PreviewWrapper: View {
+        @State private var volume: Double = 50
 
-        PlayerControlsView(
-            isPlaying: true,
-            progress: 120,
-            duration: 240,
-            onPlay: {},
-            onPause: {},
-            onSkipPrevious: {},
-            onSkipNext: {}
-        )
+        var body: some View {
+            VStack(spacing: 40) {
+                PlayerControlsView(
+                    isPlaying: false,
+                    progress: 45,
+                    duration: 180,
+                    volume: $volume,
+                    isShuffled: false,
+                    isLiked: false,
+                    repeatIcon: "repeat",
+                    isRepeatActive: false,
+                    onPlay: {},
+                    onPause: {},
+                    onSkipPrevious: {},
+                    onSkipNext: {},
+                    onSeek: { _ in },
+                    onShuffle: {},
+                    onLike: {},
+                    onRepeat: {}
+                )
+
+                PlayerControlsView(
+                    isPlaying: true,
+                    progress: 120,
+                    duration: 240,
+                    volume: $volume,
+                    isShuffled: true,
+                    isLiked: true,
+                    repeatIcon: "repeat.1",
+                    isRepeatActive: true,
+                    onPlay: {},
+                    onPause: {},
+                    onSkipPrevious: {},
+                    onSkipNext: {},
+                    onSeek: { _ in },
+                    onShuffle: {},
+                    onLike: {},
+                    onRepeat: {}
+                )
+            }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+        }
     }
-    .padding()
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color.black)
+
+    return PreviewWrapper()
 }

@@ -17,6 +17,11 @@ class NowPlayingViewModel: ObservableObject {
     @Published private(set) var progress: TimeInterval = 0.0
     @Published private(set) var duration: TimeInterval = 0.0
 
+    @Published var volume: Double = 50.0
+    @Published var isShuffled: Bool = false
+    @Published var isLiked: Bool = false
+    @Published var repeatMode: RepeatMode = .off
+
     init(playerService: PlayerService) {
         self.playerService = playerService
         setupBindings()
@@ -59,5 +64,52 @@ class NowPlayingViewModel: ObservableObject {
 
     func skipPrevious() {
         // TODO: Implement when MusicAssistantKit adds previous() method
+    }
+
+    func seek(to time: TimeInterval) {
+        // Local state update
+        progress = time
+        // TODO: Call Music Assistant API when seek is supported
+        print("Seek to \(time) (not yet implemented in API)")
+    }
+
+    func toggleShuffle() {
+        isShuffled.toggle()
+        // TODO: Call Music Assistant API
+        print("Shuffle: \(isShuffled) (not yet implemented)")
+    }
+
+    func toggleLike() {
+        isLiked.toggle()
+        // TODO: Persist to favorites
+        print("Liked: \(isLiked)")
+    }
+
+    func cycleRepeatMode() {
+        switch repeatMode {
+        case .off: repeatMode = .all
+        case .all: repeatMode = .one
+        case .one: repeatMode = .off
+        }
+        // TODO: Call Music Assistant API
+        print("Repeat mode: \(repeatMode)")
+    }
+
+    enum RepeatMode {
+        case off
+        case all
+        case one
+
+        var icon: String {
+            switch self {
+            case .off: return "repeat"
+            case .all: return "repeat"
+            case .one: return "repeat.1"
+            }
+        }
+
+        var isActive: Bool {
+            self != .off
+        }
     }
 }
