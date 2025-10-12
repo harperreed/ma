@@ -106,7 +106,7 @@ tell application "Finder"
         set viewOptions to the icon view options of container window
         set arrangement of viewOptions to not arranged
         set icon size of viewOptions to 128
-        set background picture of viewOptions to file ".background:background.png" of disk "${VOLUME_NAME}"
+        set background picture of viewOptions to POSIX file "${MOUNT_DIR}/.background/background.png"
 
         -- Position app icon
         set position of item "${APP_BUNDLE}" of container window to {150, 200}
