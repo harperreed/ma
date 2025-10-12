@@ -80,8 +80,8 @@ struct NowPlayingView: View {
     // MARK: - Responsive Sizing
 
     private func albumArtSize(for size: CGSize) -> CGFloat {
-        let baseSize = min(size.width, size.height) * 0.35
-        return min(max(baseSize, 250), 500)
+        let baseSize = min(size.width, size.height) * 0.55
+        return min(max(baseSize, 350), 800)
     }
 
     private func titleFontSize(for size: CGSize) -> CGFloat {
