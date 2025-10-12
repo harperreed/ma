@@ -45,6 +45,24 @@ xcodebuild -project MusicAssistantPlayer.xcodeproj \
 ./scripts/create-dmg.sh
 ```
 
+## Automated Release (GitHub Actions)
+
+The repository includes a GitHub Actions workflow for automated releases:
+
+```bash
+# Create and push a tag to trigger release build
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow will:
+1. Run all tests
+2. Build the app bundle (unsigned)
+3. Create a styled DMG
+4. Create a GitHub Release with the DMG attached
+
+**Code Signing:** The workflow includes commented-out steps for code signing and notarization. See [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md) for setup instructions when ready.
+
 ## Distribution
 
 The DMG file can be distributed directly. Users will:
