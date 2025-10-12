@@ -123,132 +123,18 @@ struct SidebarView: View {
 
                                 if isGroupsSectionExpanded {
                                     ForEach(groups) { player in
-                        let children = childPlayers(for: player)
-                        VStack(spacing: 0) {
-                            // Parent player/group
-                            HStack(spacing: 0) {
-                                // Chevron for groups with children
-                                if !children.isEmpty {
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            toggleGroup(player.id)
-                                        }
-                                    }) {
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundColor(.white.opacity(0.5))
-                                            .rotationEffect(.degrees(isGroupExpanded(player.id) ? 90 : 0))
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.leading, 4)
-                                } else {
-                                    Spacer()
-                                        .frame(width: 20)
-                                }
-
-                                // Main player button
-                                Button(action: {
-                                    selectedPlayer = player
-                                }) {
-                                    HStack(spacing: 8) {
-                                        // Icon based on player type and state
-                                        if let icon = playerIcon(for: player) {
-                                            Image(systemName: icon)
-                                                .font(.system(size: 10))
-                                                .foregroundColor(playerIconColor(for: player))
-                                                .frame(width: 16)
-                                        } else {
-                                            Spacer()
-                                                .frame(width: 16)
-                                        }
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            HStack(spacing: 6) {
-                                                Text(player.name)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(selectedPlayer?.id == player.id ? .white : .white.opacity(0.7))
-
-                                                // Show "+ N" badge for players with children
-                                                if !children.isEmpty {
-                                                    Text("+\(children.count)")
-                                                        .font(.system(size: 10, weight: .medium))
-                                                        .foregroundColor(.white.opacity(0.6))
-                                                        .padding(.horizontal, 6)
-                                                        .padding(.vertical, 2)
-                                                        .background(Color.white.opacity(0.1))
-                                                        .cornerRadius(4)
+                                        PlayerListItem(
+                                            player: player,
+                                            children: childPlayers(for: player),
+                                            isExpanded: isGroupExpanded(player.id),
+                                            isSelected: selectedPlayer?.id == player.id,
+                                            onToggleExpand: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    toggleGroup(player.id)
                                                 }
-                                            }
-
-                                            // Show grouping info subtitle
-                                            if player.isGroup && !player.groupChildIds.isEmpty {
-                                                Text("Group • \(player.groupChildIds.count) \(player.groupChildIds.count == 1 ? "player" : "players")")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.white.opacity(0.4))
-                                            } else if !player.isGroup && !children.isEmpty {
-                                                Text("Synced • \(children.count) \(children.count == 1 ? "player" : "players")")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.white.opacity(0.4))
-                                            }
-                                        }
-
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        selectedPlayer?.id == player.id ?
-                                            Color.white.opacity(0.1) : Color.clear
-                                    )
-                                    .cornerRadius(6)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 4)
-
-                            // Child players (group members or synced players) - only show if expanded
-                            if !children.isEmpty && isGroupExpanded(player.id) {
-                                ForEach(children) { child in
-                                    Button(action: {
-                                        selectedPlayer = child
-                                    }) {
-                                        HStack(spacing: 8) {
-                                            // Indentation
-                                            Spacer()
-                                                .frame(width: 12)
-
-                                            // Child icon
-                                            if let icon = playerIcon(for: child) {
-                                                Image(systemName: icon)
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(playerIconColor(for: child))
-                                                    .frame(width: 16)
-                                            } else {
-                                                Spacer()
-                                                    .frame(width: 16)
-                                            }
-
-                                            Text(child.name)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(selectedPlayer?.id == child.id ? .white : .white.opacity(0.6))
-
-                                            Spacer()
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 2)
-                                        .background(
-                                            selectedPlayer?.id == child.id ?
-                                                Color.white.opacity(0.08) : Color.clear
+                                            },
+                                            onSelectPlayer: { selectedPlayer = $0 }
                                         )
-                                        .cornerRadius(4)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.horizontal, 4)
-                                    .padding(.leading, 4)
-                                }
-                            }
-                        }
                                     }
                                 }
                             }
@@ -286,132 +172,18 @@ struct SidebarView: View {
 
                                 if isPlayersSectionExpanded {
                                     ForEach(individualPlayers) { player in
-                        let children = childPlayers(for: player)
-                        VStack(spacing: 0) {
-                            // Parent player/group
-                            HStack(spacing: 0) {
-                                // Chevron for groups with children
-                                if !children.isEmpty {
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            toggleGroup(player.id)
-                                        }
-                                    }) {
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundColor(.white.opacity(0.5))
-                                            .rotationEffect(.degrees(isGroupExpanded(player.id) ? 90 : 0))
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.leading, 4)
-                                } else {
-                                    Spacer()
-                                        .frame(width: 20)
-                                }
-
-                                // Main player button
-                                Button(action: {
-                                    selectedPlayer = player
-                                }) {
-                                    HStack(spacing: 8) {
-                                        // Icon based on player type and state
-                                        if let icon = playerIcon(for: player) {
-                                            Image(systemName: icon)
-                                                .font(.system(size: 10))
-                                                .foregroundColor(playerIconColor(for: player))
-                                                .frame(width: 16)
-                                        } else {
-                                            Spacer()
-                                                .frame(width: 16)
-                                        }
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            HStack(spacing: 6) {
-                                                Text(player.name)
-                                                    .font(.system(size: 13))
-                                                    .foregroundColor(selectedPlayer?.id == player.id ? .white : .white.opacity(0.7))
-
-                                                // Show "+ N" badge for players with children
-                                                if !children.isEmpty {
-                                                    Text("+\(children.count)")
-                                                        .font(.system(size: 10, weight: .medium))
-                                                        .foregroundColor(.white.opacity(0.6))
-                                                        .padding(.horizontal, 6)
-                                                        .padding(.vertical, 2)
-                                                        .background(Color.white.opacity(0.1))
-                                                        .cornerRadius(4)
+                                        PlayerListItem(
+                                            player: player,
+                                            children: childPlayers(for: player),
+                                            isExpanded: isGroupExpanded(player.id),
+                                            isSelected: selectedPlayer?.id == player.id,
+                                            onToggleExpand: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    toggleGroup(player.id)
                                                 }
-                                            }
-
-                                            // Show grouping info subtitle
-                                            if player.isGroup && !player.groupChildIds.isEmpty {
-                                                Text("Group • \(player.groupChildIds.count) \(player.groupChildIds.count == 1 ? "player" : "players")")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.white.opacity(0.4))
-                                            } else if !player.isGroup && !children.isEmpty {
-                                                Text("Synced • \(children.count) \(children.count == 1 ? "player" : "players")")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.white.opacity(0.4))
-                                            }
-                                        }
-
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        selectedPlayer?.id == player.id ?
-                                            Color.white.opacity(0.1) : Color.clear
-                                    )
-                                    .cornerRadius(6)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 4)
-
-                            // Child players (group members or synced players) - only show if expanded
-                            if !children.isEmpty && isGroupExpanded(player.id) {
-                                ForEach(children) { child in
-                                    Button(action: {
-                                        selectedPlayer = child
-                                    }) {
-                                        HStack(spacing: 8) {
-                                            // Indentation
-                                            Spacer()
-                                                .frame(width: 12)
-
-                                            // Child icon
-                                            if let icon = playerIcon(for: child) {
-                                                Image(systemName: icon)
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(playerIconColor(for: child))
-                                                    .frame(width: 16)
-                                            } else {
-                                                Spacer()
-                                                    .frame(width: 16)
-                                            }
-
-                                            Text(child.name)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(selectedPlayer?.id == child.id ? .white : .white.opacity(0.6))
-
-                                            Spacer()
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 2)
-                                        .background(
-                                            selectedPlayer?.id == child.id ?
-                                                Color.white.opacity(0.08) : Color.clear
+                                            },
+                                            onSelectPlayer: { selectedPlayer = $0 }
                                         )
-                                        .cornerRadius(4)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.horizontal, 4)
-                                    .padding(.leading, 4)
-                                }
-                            }
-                        }
                                     }
                                 }
                             }
@@ -442,17 +214,150 @@ struct SidebarView: View {
             }
         }
     }
+}
 
-    private func playerIcon(for player: Player) -> String? {
-        // Only show speaker icon when actively playing
-        if player.isActive {
-            return "speaker.wave.2.fill"
+struct PlayerListItem: View {
+    let player: Player
+    let children: [Player]
+    let isExpanded: Bool
+    let isSelected: Bool
+    let onToggleExpand: () -> Void
+    let onSelectPlayer: (Player) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Parent player/group
+            HStack(spacing: 0) {
+                // Chevron for players with children
+                if !children.isEmpty {
+                    Button(action: onToggleExpand) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.5))
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 4)
+                } else {
+                    Spacer()
+                        .frame(width: 20)
+                }
+
+                // Main player button
+                Button(action: { onSelectPlayer(player) }) {
+                    HStack(spacing: 8) {
+                        // Icon based on player type and state
+                        if player.isActive {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.6))
+                                .frame(width: 16)
+                        } else {
+                            Spacer()
+                                .frame(width: 16)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(player.name)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(isSelected ? .white : .white.opacity(0.7))
+
+                                // Show "+ N" badge for players with children
+                                if !children.isEmpty {
+                                    Text("+\(children.count)")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.white.opacity(0.1))
+                                        .cornerRadius(4)
+                                }
+                            }
+
+                            // Show grouping info subtitle
+                            if player.isGroup && !player.groupChildIds.isEmpty {
+                                Text("Group • \(player.groupChildIds.count) \(player.groupChildIds.count == 1 ? "player" : "players")")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.white.opacity(0.4))
+                            } else if !player.isGroup && !children.isEmpty {
+                                Text("Synced • \(children.count) \(children.count == 1 ? "player" : "players")")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.white.opacity(0.4))
+                            }
+                        }
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        isSelected ? Color.white.opacity(0.1) : Color.clear
+                    )
+                    .cornerRadius(6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
+
+            // Child players (group members or synced players) - only show if expanded
+            if !children.isEmpty && isExpanded {
+                ForEach(children) { child in
+                    PlayerChildItem(
+                        player: child,
+                        isSelected: isSelected,
+                        onSelect: { onSelectPlayer(child) }
+                    )
+                }
+            }
         }
-        return nil
     }
+}
 
-    private func playerIconColor(for player: Player) -> Color {
-        return .white.opacity(0.6)
+struct PlayerChildItem: View {
+    let player: Player
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                // Indentation
+                Spacer()
+                    .frame(width: 12)
+
+                // Child icon
+                if player.isActive {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                        .frame(width: 16)
+                } else {
+                    Spacer()
+                        .frame(width: 16)
+                }
+
+                Text(player.name)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                isSelected ? Color.white.opacity(0.08) : Color.clear
+            )
+            .cornerRadius(4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+        .padding(.leading, 4)
     }
 }
 

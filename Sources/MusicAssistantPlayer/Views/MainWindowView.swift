@@ -26,13 +26,6 @@ struct MainWindowView: View {
         // Initialize StateObjects
         _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)
-
-        // Configure server host on services after StateObject initialization
-        // This is safe because services are MainActor-isolated
-        Task { @MainActor in
-            playerSvc.setServerHost(serverConfig.host)
-            queueSvc.setServerHost(serverConfig.host)
-        }
     }
 
     var body: some View {
@@ -144,11 +137,24 @@ struct MainWindowView: View {
                 await MainActor.run {
                     self.availablePlayers = players
 
-                    // Update selected player if it still exists
+                    // Update selected player if it still exists, otherwise select first active or first player
                     if let currentlySelected = selectedPlayer,
                        let updatedPlayer = players.first(where: { $0.id == currentlySelected.id }) {
                         self.selectedPlayer = updatedPlayer
                         self.playerService.selectedPlayer = updatedPlayer
+                    } else if selectedPlayer != nil {
+                        // Previously selected player no longer exists, select a new one
+                        if let firstActive = players.first(where: { $0.isActive }) {
+                            self.selectedPlayer = firstActive
+                            self.playerService.selectedPlayer = firstActive
+                        } else if let first = players.first {
+                            self.selectedPlayer = first
+                            self.playerService.selectedPlayer = first
+                        } else {
+                            // No players available
+                            self.selectedPlayer = nil
+                            self.playerService.selectedPlayer = nil
+                        }
                     }
                 }
             }

@@ -17,7 +17,7 @@ final class EventParserTests: XCTestCase {
             ] as [String: Any])
         ]
 
-        let track = EventParser.parseTrack(from: eventData, serverHost: "192.168.200.113")
+        let track = EventParser.parseTrack(from: eventData)
 
         XCTAssertEqual(track?.title, "Bohemian Rhapsody")
         XCTAssertEqual(track?.artist, "Queen")

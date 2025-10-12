@@ -5,7 +5,7 @@ import Foundation
 import MusicAssistantKit
 
 enum EventParser {
-    static func parseTrack(from data: [String: AnyCodable], serverHost: String, port: Int = 8095) -> Track? {
+    static func parseTrack(from data: [String: AnyCodable]) -> Track? {
         guard let currentMediaWrapper = data["current_media"],
               let currentMedia = currentMediaWrapper.value as? [String: Any]
         else {
@@ -76,7 +76,7 @@ enum EventParser {
         return 0.0
     }
 
-    static func parseQueueItems(from data: [String: AnyCodable], serverHost: String, port: Int = 8095) -> [Track] {
+    static func parseQueueItems(from data: [String: AnyCodable]) -> [Track] {
         guard let itemsWrapper = data["items"],
               let items = itemsWrapper.value as? [[String: Any]]
         else {

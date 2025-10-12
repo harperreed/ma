@@ -13,7 +13,6 @@ class QueueService: ObservableObject {
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
     private var eventTask: Task<Void, Never>?
-    private var serverHost: String = "192.168.200.113"
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -37,10 +36,7 @@ class QueueService: ObservableObject {
                     guard event.queueId == self.queueId else { return }
 
                     // Parse queue items
-                    self.upcomingTracks = EventParser.parseQueueItems(
-                        from: event.data,
-                        serverHost: self.serverHost
-                    )
+                    self.upcomingTracks = EventParser.parseQueueItems(from: event.data)
                 }
             }
         }
@@ -57,23 +53,13 @@ class QueueService: ObservableObject {
             if let itemsDict = result.value as? [String: Any] {
                 // If it's already a dictionary with "items" key
                 let anyCodableData = itemsDict.mapValues { AnyCodable($0) }
-                self.upcomingTracks = EventParser.parseQueueItems(
-                    from: anyCodableData,
-                    serverHost: serverHost
-                )
+                self.upcomingTracks = EventParser.parseQueueItems(from: anyCodableData)
             } else if let itemsArray = result.value as? [[String: Any]] {
                 // If it's directly an array of items
                 let queueData = ["items": itemsArray]
                 let anyCodableData = queueData.mapValues { AnyCodable($0) }
-                self.upcomingTracks = EventParser.parseQueueItems(
-                    from: anyCodableData,
-                    serverHost: serverHost
-                )
+                self.upcomingTracks = EventParser.parseQueueItems(from: anyCodableData)
             }
         }
-    }
-
-    func setServerHost(_ host: String) {
-        self.serverHost = host
     }
 }

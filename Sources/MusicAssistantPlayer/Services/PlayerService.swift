@@ -16,7 +16,6 @@ class PlayerService: ObservableObject {
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
     private var eventTask: Task<Void, Never>?
-    private var serverHost: String = ""
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -66,7 +65,7 @@ class PlayerService: ObservableObject {
                     }
 
                     // Parse track
-                    if let track = EventParser.parseTrack(from: event.data, serverHost: self.serverHost) {
+                    if let track = EventParser.parseTrack(from: event.data) {
                         self.currentTrack = track
                     }
 
@@ -78,10 +77,6 @@ class PlayerService: ObservableObject {
                 }
             }
         }
-    }
-
-    func setServerHost(_ host: String) {
-        self.serverHost = host
     }
 
     func fetchPlayerState(for playerId: String) async {
@@ -110,7 +105,7 @@ class PlayerService: ObservableObject {
                 let anyCodableData = playerData.mapValues { AnyCodable($0) }
 
                 // Parse track
-                if let track = EventParser.parseTrack(from: anyCodableData, serverHost: serverHost) {
+                if let track = EventParser.parseTrack(from: anyCodableData) {
                     currentTrack = track
                 } else {
                     currentTrack = nil
