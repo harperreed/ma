@@ -1,5 +1,5 @@
 // ABOUTME: Main now playing display with album art and metadata
-// ABOUTME: Central hero section showing current track and playback controls
+// ABOUTME: Central hero section with blurred background and responsive layout
 
 import SwiftUI
 
@@ -7,73 +7,97 @@ struct NowPlayingView: View {
     @ObservedObject var viewModel: NowPlayingViewModel
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        GeometryReader { geometry in
+            ZStack {
+                // Blurred background
+                BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
 
-            // Album art
-            AlbumArtView(
-                artworkURL: viewModel.artworkURL,
-                size: 320
-            )
+                // Content
+                VStack(spacing: responsiveSpacing(for: geometry.size)) {
+                    Spacer()
 
-            // Track metadata
-            VStack(spacing: 8) {
-                Text(viewModel.trackTitle)
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
+                    // Album art
+                    AlbumArtView(
+                        artworkURL: viewModel.artworkURL,
+                        size: albumArtSize(for: geometry.size)
+                    )
 
-                HStack(spacing: 8) {
-                    Text(viewModel.artistName)
-                        .font(.system(size: 18))
-                        .foregroundColor(.white.opacity(0.8))
+                    // Track metadata
+                    VStack(spacing: 8) {
+                        Text(viewModel.trackTitle)
+                            .font(.system(size: titleFontSize(for: geometry.size), weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
 
-                    if !viewModel.albumName.isEmpty {
-                        Text("•")
-                            .foregroundColor(.white.opacity(0.5))
-                        Text(viewModel.albumName)
-                            .font(.system(size: 18))
-                            .foregroundColor(.white.opacity(0.8))
+                        HStack(spacing: 8) {
+                            Text(viewModel.artistName)
+                                .font(.system(size: metadataFontSize(for: geometry.size)))
+                                .foregroundColor(.white.opacity(0.85))
+
+                            if !viewModel.albumName.isEmpty {
+                                Text("•")
+                                    .foregroundColor(.white.opacity(0.5))
+                                Text(viewModel.albumName)
+                                    .font(.system(size: metadataFontSize(for: geometry.size)))
+                                    .foregroundColor(.white.opacity(0.85))
+                            }
+                        }
+                        .lineLimit(1)
+                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                     }
+                    .padding(.horizontal)
+
+                    // Player controls
+                    PlayerControlsView(
+                        isPlaying: viewModel.isPlaying,
+                        progress: viewModel.progress,
+                        duration: viewModel.duration,
+                        volume: $viewModel.volume,
+                        isShuffled: viewModel.isShuffled,
+                        isLiked: viewModel.isLiked,
+                        repeatIcon: viewModel.repeatMode.icon,
+                        isRepeatActive: viewModel.repeatMode.isActive,
+                        onPlay: viewModel.play,
+                        onPause: viewModel.pause,
+                        onSkipPrevious: viewModel.skipPrevious,
+                        onSkipNext: viewModel.skipNext,
+                        onSeek: viewModel.seek,
+                        onShuffle: viewModel.toggleShuffle,
+                        onLike: viewModel.toggleLike,
+                        onRepeat: viewModel.cycleRepeatMode
+                    )
+                    .frame(maxWidth: controlsMaxWidth(for: geometry.size))
+
+                    Spacer()
                 }
-                .lineLimit(1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.horizontal)
-
-            // Player controls
-            PlayerControlsView(
-                isPlaying: viewModel.isPlaying,
-                progress: viewModel.progress,
-                duration: viewModel.duration,
-                volume: $viewModel.volume,
-                isShuffled: viewModel.isShuffled,
-                isLiked: viewModel.isLiked,
-                repeatIcon: viewModel.repeatMode.icon,
-                isRepeatActive: viewModel.repeatMode.isActive,
-                onPlay: viewModel.play,
-                onPause: viewModel.pause,
-                onSkipPrevious: viewModel.skipPrevious,
-                onSkipNext: viewModel.skipNext,
-                onSeek: viewModel.seek,
-                onShuffle: viewModel.toggleShuffle,
-                onLike: viewModel.toggleLike,
-                onRepeat: viewModel.cycleRepeatMode
-            )
-            .frame(maxWidth: 500)
-
-            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.1, green: 0.1, blue: 0.15),
-                    Color(red: 0.15, green: 0.15, blue: 0.2)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+    }
+
+    // MARK: - Responsive Sizing
+
+    private func albumArtSize(for size: CGSize) -> CGFloat {
+        let baseSize = min(size.width, size.height) * 0.35
+        return min(max(baseSize, 250), 500)
+    }
+
+    private func titleFontSize(for size: CGSize) -> CGFloat {
+        size.width < 800 ? 24 : 28
+    }
+
+    private func metadataFontSize(for size: CGSize) -> CGFloat {
+        size.width < 800 ? 14 : 18
+    }
+
+    private func responsiveSpacing(for size: CGSize) -> CGFloat {
+        size.width < 800 ? 16 : 24
+    }
+
+    private func controlsMaxWidth(for size: CGSize) -> CGFloat {
+        size.width > 1200 ? 700 : 600
     }
 }
 
