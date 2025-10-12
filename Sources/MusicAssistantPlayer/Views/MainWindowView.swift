@@ -29,36 +29,40 @@ struct MainWindowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar
-            SidebarView(
-                selectedPlayer: $selectedPlayer,
-                availablePlayers: availablePlayers,
-                connectionState: playerService.connectionState,
-                serverHost: serverConfig.host,
-                onRetry: handleRetry
-            )
-            .frame(width: 220)
-            .onChange(of: selectedPlayer) { oldValue, newValue in
-                if let player = newValue {
-                    handlePlayerSelection(player)
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                // Sidebar (responsive width)
+                SidebarView(
+                    selectedPlayer: $selectedPlayer,
+                    availablePlayers: availablePlayers,
+                    connectionState: playerService.connectionState,
+                    serverHost: serverConfig.host,
+                    onRetry: handleRetry
+                )
+                .frame(width: sidebarWidth(for: geometry.size))
+                .onChange(of: selectedPlayer) { oldValue, newValue in
+                    if let player = newValue {
+                        handlePlayerSelection(player)
+                    }
+                }
+
+                // Now Playing (center hero)
+                NowPlayingView(
+                    viewModel: NowPlayingViewModel(playerService: playerService)
+                )
+                .frame(maxWidth: .infinity)
+
+                // Queue (right panel, responsive width)
+                if shouldShowQueue(for: geometry.size) {
+                    QueueView(
+                        viewModel: QueueViewModel(queueService: queueService)
+                    )
+                    .frame(width: queueWidth(for: geometry.size))
                 }
             }
-
-            // Now Playing (center hero)
-            NowPlayingView(
-                viewModel: NowPlayingViewModel(playerService: playerService)
-            )
-            .frame(maxWidth: .infinity)
-
-            // Queue (right panel)
-            QueueView(
-                viewModel: QueueViewModel(queueService: queueService)
-            )
-            .frame(width: 350)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
         .task {
             await fetchInitialData()
             subscribeToPlayerUpdates()
@@ -66,6 +70,33 @@ struct MainWindowView: View {
         .onDisappear {
             playerUpdateTask?.cancel()
         }
+    }
+
+    // MARK: - Responsive Layout
+
+    private func sidebarWidth(for size: CGSize) -> CGFloat {
+        if size.width < 800 {
+            return 180  // Narrower on small screens
+        } else if size.width < 1000 {
+            return 200
+        } else {
+            return 220  // Full width on larger screens
+        }
+    }
+
+    private func queueWidth(for size: CGSize) -> CGFloat {
+        if size.width < 1000 {
+            return 280  // Narrower on small screens
+        } else if size.width < 1200 {
+            return 320
+        } else {
+            return 350  // Full width on larger screens
+        }
+    }
+
+    private func shouldShowQueue(for size: CGSize) -> Bool {
+        // Hide queue on very small windows to prioritize now playing
+        size.width >= 900
     }
 
     private func fetchInitialData() async {
