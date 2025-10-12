@@ -4,4 +4,15 @@
 xcuserdata/
 DerivedData/
 .swiftpm/
-*.xcodeproj
+
+# Xcode project (committed, but ignore user data)
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Build outputs
+build/
+*.dmg
+dmg-staging/
+
+# Icon generation
+Resources/icon-sources/*.iconset/

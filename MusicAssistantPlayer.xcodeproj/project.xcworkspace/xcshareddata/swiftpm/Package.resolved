@@ -1,0 +1,15 @@
+{
+  "originHash" : "5dd2f93ad72e0dd19fef929dd78f772c4a404d51b5069d19b00e4865057863dc",
+  "pins" : [
+    {
+      "identity" : "musicassistantkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/harperreed/MusicAssistantKit.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "de0bb52cb635ca1b2831dc7d7001fb3807d769c0"
+      }
+    }
+  ],
+  "version" : 3
+}

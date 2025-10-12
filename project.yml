@@ -1,0 +1,43 @@
+name: MusicAssistantPlayer
+options:
+  bundleIdPrefix: com.harperreed
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: en
+  xcodeVersion: "15.0"
+
+packages:
+  MusicAssistantKit:
+    url: https://github.com/harperreed/MusicAssistantKit.git
+    branch: main
+
+targets:
+  MusicAssistantPlayer:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - Sources/MusicAssistantPlayer
+    dependencies:
+      - package: MusicAssistantKit
+    settings:
+      base:
+        PRODUCT_NAME: MusicAssistantPlayer
+        PRODUCT_BUNDLE_IDENTIFIER: com.harperreed.musicassistantplayer
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        INFOPLIST_FILE: Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+
+  MusicAssistantPlayerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/MusicAssistantPlayerTests
+    dependencies:
+      - target: MusicAssistantPlayer
