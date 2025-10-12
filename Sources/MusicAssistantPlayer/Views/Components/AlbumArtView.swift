@@ -19,6 +19,14 @@ struct AlbumArtView: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
+                            .frame(width: size, height: size)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: .black.opacity(0.5), radius: 30, x: 0, y: 15)
+                            // Add subtle glow effect
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
                     case .failure:
                         placeholderImage
                     @unknown default:
@@ -30,8 +38,6 @@ struct AlbumArtView: View {
             }
         }
         .frame(width: size, height: size)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
     }
 
     private var placeholderImage: some View {
