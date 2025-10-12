@@ -36,12 +36,16 @@ struct MusicAssistantPlayerApp: App {
 
     private func handleConnection(config: ServerConfig) {
         let newClient = MusicAssistantClient(host: config.host, port: config.port)
-        self.client = newClient
 
         Task {
             do {
                 try await newClient.connect()
                 print("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
+
+                // Only set client after successful connection
+                await MainActor.run {
+                    self.client = newClient
+                }
             } catch {
                 print("Connection failed: \(error)")
                 // Clear client on failure so user can retry

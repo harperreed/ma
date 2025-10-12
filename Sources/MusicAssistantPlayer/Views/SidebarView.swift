@@ -10,6 +10,18 @@ struct SidebarView: View {
     let serverHost: String
     let onRetry: () -> Void
 
+    // Only show groups and non-synced players (hide synced players since they're represented by their group)
+    var visiblePlayers: [Player] {
+        availablePlayers.filter { player in
+            // Show groups
+            if player.isGroup {
+                return true
+            }
+            // Show individual players that aren't synced
+            return !player.isSynced
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Navigation
@@ -37,25 +49,35 @@ struct SidebarView: View {
                     .padding(.horizontal)
                     .padding(.top)
 
-                if availablePlayers.isEmpty {
+                if visiblePlayers.isEmpty {
                     Text("No players found")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.4))
                         .padding(.horizontal)
                         .padding(.vertical, 8)
                 } else {
-                    ForEach(availablePlayers) { player in
+                    ForEach(visiblePlayers) { player in
                         Button(action: {
                             selectedPlayer = player
                         }) {
                             HStack(spacing: 8) {
-                                Image(systemName: player.isActive ? "circle.fill" : "circle")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(player.isActive ? .green : .white.opacity(0.3))
+                                // Icon based on player type and state
+                                Image(systemName: playerIcon(for: player))
+                                    .font(.system(size: player.isGroup ? 10 : 8))
+                                    .foregroundColor(playerIconColor(for: player))
 
-                                Text(player.name)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(selectedPlayer?.id == player.id ? .white : .white.opacity(0.7))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(player.name)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(selectedPlayer?.id == player.id ? .white : .white.opacity(0.7))
+
+                                    // Show grouping info
+                                    if player.isGroup && !player.groupChildIds.isEmpty {
+                                        Text("Group • \(player.groupChildIds.count) \(player.groupChildIds.count == 1 ? "player" : "players")")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.white.opacity(0.4))
+                                    }
+                                }
 
                                 Spacer()
                             }
@@ -87,6 +109,26 @@ struct SidebarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(red: 0.06, green: 0.06, blue: 0.1))
     }
+
+    private func playerIcon(for player: Player) -> String {
+        if player.isGroup {
+            return player.isActive ? "speaker.wave.3.fill" : "speaker.wave.3"
+        } else if player.isSynced {
+            return player.isActive ? "circle.fill" : "circle"
+        } else {
+            return player.isActive ? "circle.fill" : "circle"
+        }
+    }
+
+    private func playerIconColor(for player: Player) -> Color {
+        if player.isActive {
+            return .green
+        } else if player.isGroup {
+            return .white.opacity(0.4)
+        } else {
+            return .white.opacity(0.3)
+        }
+    }
 }
 
 struct SidebarItem: View {
@@ -117,11 +159,14 @@ struct SidebarItem: View {
 
 #Preview {
     SidebarView(
-        selectedPlayer: .constant(Player(id: "1", name: "Kitchen", isActive: true)),
+        selectedPlayer: .constant(
+            Player(id: "1", name: "Kitchen", isActive: true, type: .player, groupChildIds: [], syncedTo: nil, activeGroup: nil)
+        ),
         availablePlayers: [
-            Player(id: "1", name: "Kitchen", isActive: true),
-            Player(id: "2", name: "Bedroom", isActive: false),
-            Player(id: "3", name: "Living Room", isActive: true)
+            Player(id: "1", name: "Kitchen", isActive: true, type: .player, groupChildIds: [], syncedTo: nil, activeGroup: nil),
+            Player(id: "2", name: "Bedroom", isActive: false, type: .player, groupChildIds: [], syncedTo: nil, activeGroup: nil),
+            Player(id: "3", name: "First Floor", isActive: true, type: .group, groupChildIds: ["1", "4"], syncedTo: nil, activeGroup: nil),
+            Player(id: "4", name: "Living Room", isActive: true, type: .player, groupChildIds: [], syncedTo: "3", activeGroup: nil)
         ],
         connectionState: .connected,
         serverHost: "192.168.200.113",

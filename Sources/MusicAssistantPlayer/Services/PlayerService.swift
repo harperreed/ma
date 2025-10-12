@@ -16,7 +16,7 @@ class PlayerService: ObservableObject {
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
     private var eventTask: Task<Void, Never>?
-    private var serverHost: String = "192.168.200.113"
+    private var serverHost: String = ""
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
