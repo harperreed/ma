@@ -10,6 +10,15 @@ struct NowPlayingView: View {
         GeometryReader { geometry in
             // Content
             VStack(spacing: responsiveSpacing(for: geometry.size)) {
+                    // Error banner at top
+                    if let error = viewModel.lastError {
+                        ErrorBanner(error: error) {
+                            viewModel.clearError()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                    }
+
                     Spacer()
 
                     // Album art

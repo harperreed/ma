@@ -118,6 +118,14 @@ class NowPlayingViewModel: ObservableObject {
         }
     }
 
+    var lastError: PlayerError? {
+        playerService.lastError
+    }
+
+    func clearError() {
+        playerService.lastError = nil
+    }
+
     enum RepeatMode {
         case off
         case all
