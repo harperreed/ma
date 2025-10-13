@@ -161,9 +161,69 @@ class LibraryService: ObservableObject {
         }
     }
 
+    // MARK: - Task 8: Fetch Playlists
+
+    func fetchPlaylists() async throws {
+        guard let client = client else {
+            self.error = "No client available"
+            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+        }
+
+        do {
+            // Music Assistant API: music/playlists/library_items
+            let result = try await client.sendCommand(command: "music/playlists/library_items")
+
+            if let result = result {
+                let parsedPlaylists = parsePlaylists(from: result)
+                self.playlists = parsedPlaylists
+                self.error = nil
+            } else {
+                self.playlists = []
+                self.error = nil
+            }
+        } catch {
+            self.error = "Failed to fetch playlists: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
+    private func parsePlaylists(from data: AnyCodable) -> [Playlist] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            guard let id = item["item_id"] as? String,
+                  let name = item["name"] as? String
+            else {
+                return nil
+            }
+
+            let artworkURL: URL?
+            if let metadata = item["metadata"] as? [String: Any],
+               let imageURLString = metadata["image"] as? String {
+                artworkURL = URL(string: imageURLString)
+            } else {
+                artworkURL = nil
+            }
+
+            let trackCount = item["track_count"] as? Int ?? 0
+            let duration = item["duration"] as? Double ?? 0.0
+            let owner = item["owner"] as? String
+
+            return Playlist(
+                id: id,
+                name: name,
+                artworkURL: artworkURL,
+                trackCount: trackCount,
+                duration: duration,
+                owner: owner
+            )
+        }
+    }
+
     // Methods to be added in subsequent tasks:
     // - fetchTracks(for albumId: String)
-    // - fetchPlaylists()
     // - playNow(item:on:)
     // - addToQueue(item:for:)
 }
