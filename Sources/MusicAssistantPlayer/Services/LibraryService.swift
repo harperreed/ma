@@ -969,7 +969,10 @@ class LibraryService: ObservableObject {
 
     func fetchFavoriteArtists(
         limit: Int? = nil,
-        offset: Int? = nil
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -979,24 +982,47 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort and filter parameters
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "artists_favorite_\(sortBy.rawValue)_\(filterKey)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Artist] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached favorite artists (sort: \(sortBy.rawValue), filter: \(filterKey))")
+            self.artists = cached
+            return
+        }
 
         do {
-            AppLogger.network.info("Fetching favorite artists: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "favorite": true,
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching favorite artists: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/artists/library_items",
-                args: [
-                    "favorite": true,
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
                 let parsedArtists = parseArtists(from: result)
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
                     self.artists = parsedArtists
+                    // Cache first page results
+                    cache.set(parsedArtists, forKey: cacheKey)
                 } else {
                     self.artists.append(contentsOf: parsedArtists)
                 }
@@ -1023,7 +1049,10 @@ class LibraryService: ObservableObject {
 
     func fetchFavoriteAlbums(
         limit: Int? = nil,
-        offset: Int? = nil
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -1033,24 +1062,47 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort and filter parameters
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "albums_favorite_\(sortBy.rawValue)_\(filterKey)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Album] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached favorite albums (sort: \(sortBy.rawValue), filter: \(filterKey))")
+            self.albums = cached
+            return
+        }
 
         do {
-            AppLogger.network.info("Fetching favorite albums: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "favorite": true,
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching favorite albums: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/albums/library_items",
-                args: [
-                    "favorite": true,
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
                 let parsedAlbums = parseAlbums(from: result)
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
                     self.albums = parsedAlbums
+                    // Cache first page results
+                    cache.set(parsedAlbums, forKey: cacheKey)
                 } else {
                     self.albums.append(contentsOf: parsedAlbums)
                 }
@@ -1077,7 +1129,10 @@ class LibraryService: ObservableObject {
 
     func fetchFavoriteTracks(
         limit: Int? = nil,
-        offset: Int? = nil
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -1087,24 +1142,47 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort and filter parameters
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "tracks_favorite_\(sortBy.rawValue)_\(filterKey)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Track] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached favorite tracks (sort: \(sortBy.rawValue), filter: \(filterKey))")
+            self.tracks = cached
+            return
+        }
 
         do {
-            AppLogger.network.info("Fetching favorite tracks: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "favorite": true,
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching favorite tracks: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/tracks/library_items",
-                args: [
-                    "favorite": true,
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
                 let parsedTracks = parseTracks(from: result)
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
                     self.tracks = parsedTracks
+                    // Cache first page results
+                    cache.set(parsedTracks, forKey: cacheKey)
                 } else {
                     self.tracks.append(contentsOf: parsedTracks)
                 }
@@ -1131,7 +1209,10 @@ class LibraryService: ObservableObject {
 
     func fetchFavoritePlaylists(
         limit: Int? = nil,
-        offset: Int? = nil
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -1141,24 +1222,47 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort and filter parameters
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "playlists_favorite_\(sortBy.rawValue)_\(filterKey)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Playlist] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached favorite playlists (sort: \(sortBy.rawValue), filter: \(filterKey))")
+            self.playlists = cached
+            return
+        }
 
         do {
-            AppLogger.network.info("Fetching favorite playlists: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "favorite": true,
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching favorite playlists: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/playlists/library_items",
-                args: [
-                    "favorite": true,
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
                 let parsedPlaylists = parsePlaylists(from: result)
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
                     self.playlists = parsedPlaylists
+                    // Cache first page results
+                    cache.set(parsedPlaylists, forKey: cacheKey)
                 } else {
                     self.playlists.append(contentsOf: parsedPlaylists)
                 }
@@ -1298,7 +1402,7 @@ class LibraryService: ObservableObject {
     }
 
     // Helper to convert media type string to LibraryCategory for cache invalidation
-    private func categoryFromMediaType(_ mediaType: String) -> LibraryCategory {
+    func categoryFromMediaType(_ mediaType: String) -> LibraryCategory {
         switch mediaType {
         case "artist":
             return .artists

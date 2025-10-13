@@ -453,4 +453,209 @@ final class LibraryServiceTests: XCTestCase {
             XCTAssertTrue(error is LibraryError)
         }
     }
+
+    // MARK: - Task 11: Comprehensive Success Tests (TDD)
+
+    @MainActor
+    func testFetchFavoriteArtistsAcceptsSortParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            // Test that method accepts sort parameter - should compile
+            try await service.fetchFavoriteArtists(sort: .nameAsc)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteArtistsAcceptsFilterParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            // Test that method accepts filter parameter - should compile
+            let filter = LibraryFilter()
+            try await service.fetchFavoriteArtists(filter: filter)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteArtistsAcceptsForceRefreshParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            // Test that method accepts forceRefresh parameter - should compile
+            try await service.fetchFavoriteArtists(forceRefresh: true)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteAlbumsAcceptsSortParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteAlbums(sort: .nameAsc)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteAlbumsAcceptsFilterParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            let filter = LibraryFilter()
+            try await service.fetchFavoriteAlbums(filter: filter)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteAlbumsAcceptsForceRefreshParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteAlbums(forceRefresh: true)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteTracksAcceptsSortParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteTracks(sort: .nameAsc)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteTracksAcceptsFilterParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            let filter = LibraryFilter()
+            try await service.fetchFavoriteTracks(filter: filter)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteTracksAcceptsForceRefreshParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteTracks(forceRefresh: true)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoritePlaylistsAcceptsSortParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoritePlaylists(sort: .nameAsc)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoritePlaylistsAcceptsFilterParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            let filter = LibraryFilter()
+            try await service.fetchFavoritePlaylists(filter: filter)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoritePlaylistsAcceptsForceRefreshParameter() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoritePlaylists(forceRefresh: true)
+            XCTFail("Should throw error with no client")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    // MARK: - Task 11: CategoryFromMediaType Tests
+
+    @MainActor
+    func testCategoryFromMediaTypeArtist() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("artist")
+        XCTAssertEqual(category, .artists)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypeAlbum() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("album")
+        XCTAssertEqual(category, .albums)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypeTrack() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("track")
+        XCTAssertEqual(category, .tracks)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypePlaylist() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("playlist")
+        XCTAssertEqual(category, .playlists)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypeRadio() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("radio")
+        XCTAssertEqual(category, .radio)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypeUnknown() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("unknown")
+        // Should default to .tracks when unknown
+        XCTAssertEqual(category, .tracks)
+    }
+
+    @MainActor
+    func testCategoryFromMediaTypeGenre() {
+        let service = LibraryService(client: nil)
+        let category = service.categoryFromMediaType("genre")
+        XCTAssertEqual(category, .genres)
+    }
 }
