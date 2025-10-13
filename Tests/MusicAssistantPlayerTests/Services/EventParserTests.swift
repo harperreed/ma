@@ -43,4 +43,159 @@ final class EventParserTests: XCTestCase {
 
         XCTAssertEqual(progress, 125.5)
     }
+
+    // MARK: - Malformed Data Tests
+
+    func testParseMalformedTrackData() {
+        let malformedData: [String: AnyCodable] = [
+            "current_media": AnyCodable("invalid string instead of dict")
+        ]
+
+        let track = EventParser.parseTrack(from: malformedData)
+        XCTAssertNil(track, "Should return nil for malformed data")
+    }
+
+    func testParseTrackWithMissingFields() {
+        let incompleteData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "uri": "test:uri"
+                // Missing name, artists, etc.
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: incompleteData)
+        // Should handle gracefully with default values
+        XCTAssertNotNil(track)
+        XCTAssertEqual(track?.title, "Unknown Track")
+        XCTAssertEqual(track?.artist, "Unknown Artist")
+        XCTAssertEqual(track?.album, "Unknown Album")
+        XCTAssertEqual(track?.duration, 0.0)
+    }
+
+    func testParseProgressWithInvalidData() {
+        let invalidData: [String: AnyCodable] = [
+            "elapsed_time": AnyCodable("not a number")
+        ]
+
+        let progress = EventParser.parseProgress(from: invalidData)
+        XCTAssertEqual(progress, 0.0, "Should return 0.0 for invalid progress data")
+    }
+
+    func testParseProgressWithMissingData() {
+        let emptyData: [String: AnyCodable] = [:]
+
+        let progress = EventParser.parseProgress(from: emptyData)
+        XCTAssertEqual(progress, 0.0, "Should return 0.0 for missing progress data")
+    }
+
+    func testParseTrackWithNoCurrentMedia() {
+        let emptyData: [String: AnyCodable] = [:]
+
+        let track = EventParser.parseTrack(from: emptyData)
+        XCTAssertNil(track, "Should return nil when current_media is missing")
+    }
+
+    func testParsePlaybackStateWithInvalidData() {
+        let invalidData: [String: AnyCodable] = [
+            "state": AnyCodable(123) // number instead of string
+        ]
+
+        let state = EventParser.parsePlaybackState(from: invalidData)
+        XCTAssertEqual(state, .stopped, "Should default to stopped for invalid state data")
+    }
+
+    func testParsePlaybackStateWithMissingData() {
+        let emptyData: [String: AnyCodable] = [:]
+
+        let state = EventParser.parsePlaybackState(from: emptyData)
+        XCTAssertEqual(state, .stopped, "Should default to stopped for missing state data")
+    }
+
+    func testParsePlaybackStateWithUnknownValue() {
+        let unknownData: [String: AnyCodable] = [
+            "state": AnyCodable("buffering") // unknown state
+        ]
+
+        let state = EventParser.parsePlaybackState(from: unknownData)
+        XCTAssertEqual(state, .stopped, "Should default to stopped for unknown state values")
+    }
+
+    func testParseTrackWithInvalidDuration() {
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "title": "Test Track",
+                "artist": "Test Artist",
+                "album": "Test Album",
+                "duration": "invalid string duration"
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+        XCTAssertNotNil(track)
+        XCTAssertEqual(track?.duration, 0.0, "Should default to 0.0 for invalid duration")
+    }
+
+    func testParseTrackWithInvalidArtworkURL() {
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "title": "Test Track",
+                "artist": "Test Artist",
+                "album": "Test Album",
+                "duration": 180,
+                "image_url": "not a valid url scheme://invalid"
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+        XCTAssertNotNil(track)
+        // URL init will fail for invalid URLs, so artworkURL should be nil
+        XCTAssertNil(track?.artworkURL, "Should be nil for invalid URL strings")
+    }
+
+    func testParseQueueItemsWithEmptyArray() {
+        let emptyQueueData: [String: AnyCodable] = [
+            "items": AnyCodable([])
+        ]
+
+        let queueItems = EventParser.parseQueueItems(from: emptyQueueData)
+        XCTAssertEqual(queueItems.count, 0, "Should return empty array for empty queue")
+    }
+
+    func testParseQueueItemsWithMissingData() {
+        let missingData: [String: AnyCodable] = [:]
+
+        let queueItems = EventParser.parseQueueItems(from: missingData)
+        XCTAssertEqual(queueItems.count, 0, "Should return empty array when items is missing")
+    }
+
+    func testParseQueueItemsWithInvalidData() {
+        let invalidData: [String: AnyCodable] = [
+            "items": AnyCodable("not an array")
+        ]
+
+        let queueItems = EventParser.parseQueueItems(from: invalidData)
+        XCTAssertEqual(queueItems.count, 0, "Should return empty array for invalid items data")
+    }
+
+    func testParseProgressWithIntValue() {
+        let intData: [String: AnyCodable] = [
+            "elapsed_time": AnyCodable(42)
+        ]
+
+        let progress = EventParser.parseProgress(from: intData)
+        XCTAssertEqual(progress, 42.0, "Should convert Int to Double correctly")
+    }
+
+    func testParseTrackDurationWithIntValue() {
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "title": "Test Track",
+                "duration": 180 // Int instead of Double
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+        XCTAssertNotNil(track)
+        XCTAssertEqual(track?.duration, 180.0, "Should convert Int duration to Double")
+    }
 }

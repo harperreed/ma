@@ -3,6 +3,7 @@
 
 import XCTest
 import Combine
+import MusicAssistantKit
 @testable import MusicAssistantPlayer
 
 final class PlayerServiceTests: XCTestCase {
@@ -186,5 +187,131 @@ final class PlayerServiceTests: XCTestCase {
 
         // Verify error is published
         XCTAssertNotNil(service.lastError)
+    }
+
+    // MARK: - Network Failure Tests
+
+    @MainActor
+    func testNetworkFailureHandling() async {
+        let service = PlayerService(client: nil)
+
+        // Attempt operation without client
+        await service.play()
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+        if case .networkError = service.lastError {
+            // Expected error type
+        } else {
+            XCTFail("Expected networkError, got \(String(describing: service.lastError))")
+        }
+    }
+
+    @MainActor
+    func testPlayerNotFoundError() async {
+        // Create service with client but no selected player
+        let mockClient = MusicAssistantClient(host: "test", port: 8095)
+        let service = PlayerService(client: mockClient)
+
+        // Attempt operation without selected player
+        await service.play()
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected error type
+        } else {
+            XCTFail("Expected playerNotFound, got \(String(describing: service.lastError))")
+        }
+    }
+
+    @MainActor
+    func testAllCommandsFailGracefullyWithoutClient() async {
+        let service = PlayerService(client: nil)
+
+        // Test all commands fail with network error
+        await service.play()
+        XCTAssertNotNil(service.lastError)
+
+        await service.pause()
+        XCTAssertNotNil(service.lastError)
+
+        await service.stop()
+        XCTAssertNotNil(service.lastError)
+
+        await service.skipNext()
+        XCTAssertNotNil(service.lastError)
+
+        await service.skipPrevious()
+        XCTAssertNotNil(service.lastError)
+
+        await service.seek(to: 30.0)
+        XCTAssertNotNil(service.lastError)
+
+        await service.setVolume(50.0)
+        XCTAssertNotNil(service.lastError)
+    }
+
+    @MainActor
+    func testAllCommandsFailGracefullyWithoutPlayer() async {
+        let mockClient = MusicAssistantClient(host: "test", port: 8095)
+        let service = PlayerService(client: mockClient)
+
+        // Test all commands fail with playerNotFound error
+        await service.play()
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for play()")
+        }
+
+        await service.pause()
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for pause()")
+        }
+
+        await service.stop()
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for stop()")
+        }
+
+        await service.skipNext()
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for skipNext()")
+        }
+
+        await service.skipPrevious()
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for skipPrevious()")
+        }
+
+        await service.seek(to: 30.0)
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for seek()")
+        }
+
+        await service.setVolume(50.0)
+        XCTAssertNotNil(service.lastError)
+        if case .playerNotFound = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected playerNotFound for setVolume()")
+        }
     }
 }
