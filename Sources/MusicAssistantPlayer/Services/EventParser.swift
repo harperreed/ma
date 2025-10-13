@@ -5,6 +5,13 @@ import Foundation
 import MusicAssistantKit
 
 enum EventParser {
+    // MARK: - Supporting Types
+
+    struct GroupStatus {
+        let isGrouped: Bool
+        let childIds: [String]
+    }
+
     // MARK: - Shared Parsing Utilities
 
     static func parseDuration(from value: Any?) -> Double {
@@ -93,6 +100,37 @@ enum EventParser {
         }
 
         return 50.0
+    }
+
+    static func parseShuffleState(from data: [String: AnyCodable]) -> Bool {
+        if let shuffle = data["shuffle"]?.value as? Bool {
+            return shuffle
+        }
+        // Also check queue_settings if present
+        if let queueSettings = data["queue_settings"] as? [String: Any],
+           let shuffle = queueSettings["shuffle"] as? Bool {
+            return shuffle
+        }
+        return false
+    }
+
+    static func parseRepeatMode(from data: [String: AnyCodable]) -> String {
+        if let repeatMode = data["repeat"]?.value as? String {
+            return repeatMode
+        }
+        // Also check queue_settings if present
+        if let queueSettings = data["queue_settings"] as? [String: Any],
+           let repeatMode = queueSettings["repeat"] as? String {
+            return repeatMode
+        }
+        return "off"
+    }
+
+    static func parseGroupStatus(from data: [String: AnyCodable]) -> GroupStatus {
+        if let childIds = data["group_childs"]?.value as? [String], !childIds.isEmpty {
+            return GroupStatus(isGrouped: true, childIds: childIds)
+        }
+        return GroupStatus(isGrouped: false, childIds: [])
     }
 
     static func parseQueueItems(from data: [String: AnyCodable]) -> [Track] {

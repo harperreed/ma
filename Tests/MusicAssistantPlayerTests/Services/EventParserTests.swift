@@ -260,4 +260,56 @@ final class EventParserTests: XCTestCase {
         let invalidDuration = EventParser.parseDuration(from: "not a number")
         XCTAssertEqual(invalidDuration, 0.0, "Should return 0.0 for invalid duration type")
     }
+
+    // MARK: - Shuffle State Parsing Tests
+
+    func testParseShuffleState() {
+        let data: [String: AnyCodable] = [
+            "shuffle": AnyCodable(true)
+        ]
+
+        let isShuffled = EventParser.parseShuffleState(from: data)
+        XCTAssertTrue(isShuffled)
+    }
+
+    func testParseShuffleStateDefault() {
+        let data: [String: AnyCodable] = [:]
+
+        let isShuffled = EventParser.parseShuffleState(from: data)
+        XCTAssertFalse(isShuffled)
+    }
+
+    // MARK: - Repeat Mode Parsing Tests
+
+    func testParseRepeatMode() {
+        let dataOff: [String: AnyCodable] = ["repeat": AnyCodable("off")]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataOff), "off")
+
+        let dataAll: [String: AnyCodable] = ["repeat": AnyCodable("all")]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataAll), "all")
+
+        let dataOne: [String: AnyCodable] = ["repeat": AnyCodable("one")]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataOne), "one")
+    }
+
+    func testParseRepeatModeDefault() {
+        let data: [String: AnyCodable] = [:]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: data), "off")
+    }
+
+    // MARK: - Group Status Parsing Tests
+
+    func testParseGroupStatus() {
+        let dataGrouped: [String: AnyCodable] = [
+            "group_childs": AnyCodable(["child1", "child2"])
+        ]
+        let grouped = EventParser.parseGroupStatus(from: dataGrouped)
+        XCTAssertTrue(grouped.isGrouped)
+        XCTAssertEqual(grouped.childIds, ["child1", "child2"])
+
+        let dataSingle: [String: AnyCodable] = [:]
+        let single = EventParser.parseGroupStatus(from: dataSingle)
+        XCTAssertFalse(single.isGrouped)
+        XCTAssertTrue(single.childIds.isEmpty)
+    }
 }
