@@ -21,6 +21,7 @@ class LibraryService: ObservableObject {
     @Published var currentSort: LibrarySortOption = .nameAsc
     @Published var currentFilter: LibraryFilter = LibraryFilter()
     private let pageSize: Int = 50
+    private let cache = LibraryCache()
 
     private(set) var client: MusicAssistantClient?
 
@@ -34,7 +35,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -46,6 +48,18 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort and filter parameters
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "artists_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Artist] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached artists (sort: \(sortBy.rawValue), filter: \(filterKey))")
+            self.artists = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -71,6 +85,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.artists = parsedArtists
+                    // Cache first page results
+                    cache.set(parsedArtists, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.artists.append(contentsOf: parsedArtists)
@@ -137,7 +153,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -149,6 +166,19 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key from sort, filter, and artist parameters
+        let artistKey = artistId ?? "all"
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "albums_\(artistKey)_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Album] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached albums (artist: \(artistKey), sort: \(sortBy.rawValue))")
+            self.albums = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -178,6 +208,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.albums = parsedAlbums
+                    // Cache first page results
+                    cache.set(parsedAlbums, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.albums.append(contentsOf: parsedAlbums)
@@ -259,7 +291,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -271,6 +304,18 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "playlists_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Playlist] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached playlists (sort: \(sortBy.rawValue))")
+            self.playlists = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -296,6 +341,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.playlists = parsedPlaylists
+                    // Cache first page results
+                    cache.set(parsedPlaylists, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.playlists.append(contentsOf: parsedPlaylists)
@@ -365,7 +412,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -377,6 +425,19 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key
+        let albumKey = albumId ?? "all"
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "tracks_\(albumKey)_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Track] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached tracks (album: \(albumKey), sort: \(sortBy.rawValue))")
+            self.tracks = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -406,6 +467,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.tracks = parsedTracks
+                    // Cache first page results
+                    cache.set(parsedTracks, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.tracks.append(contentsOf: parsedTracks)
@@ -495,7 +558,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -507,6 +571,18 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "radios_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Radio] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached radios (sort: \(sortBy.rawValue))")
+            self.radios = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -532,6 +608,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.radios = parsedRadios
+                    // Cache first page results
+                    cache.set(parsedRadios, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.radios.append(contentsOf: parsedRadios)
@@ -596,7 +674,8 @@ class LibraryService: ObservableObject {
         limit: Int? = nil,
         offset: Int? = nil,
         sort: LibrarySortOption? = nil,
-        filter: LibraryFilter? = nil
+        filter: LibraryFilter? = nil,
+        forceRefresh: Bool = false
     ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
@@ -608,6 +687,18 @@ class LibraryService: ObservableObject {
         let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
+
+        // Build cache key
+        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let cacheKey = "genres_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+
+        // Check cache first (if not forcing refresh and first page)
+        if !forceRefresh && fetchOffset == 0,
+           let cached: [Genre] = cache.get(forKey: cacheKey) {
+            AppLogger.network.debug("Using cached genres (sort: \(sortBy.rawValue))")
+            self.genres = cached
+            return
+        }
 
         do {
             var args: [String: Any] = [
@@ -633,6 +724,8 @@ class LibraryService: ObservableObject {
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.genres = parsedGenres
+                    // Cache first page results
+                    cache.set(parsedGenres, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
                     self.genres.append(contentsOf: parsedGenres)
@@ -828,6 +921,60 @@ class LibraryService: ObservableObject {
     func resetPagination() {
         currentOffset = 0
         hasMoreItems = false
+    }
+
+    // MARK: - Task 10: Cache Management
+
+    func clearCache() {
+        cache.clear()
+        AppLogger.network.debug("Library cache cleared")
+    }
+
+    func invalidateCache(for category: LibraryCategory) {
+        // Remove all cache entries for this category
+        // Since we build keys with category prefix, we need to iterate and remove matching keys
+        let prefix: String
+        switch category {
+        case .artists:
+            prefix = "artists_"
+        case .albums:
+            prefix = "albums_"
+        case .tracks:
+            prefix = "tracks_"
+        case .playlists:
+            prefix = "playlists_"
+        case .radio:
+            prefix = "radio_"
+        case .genres:
+            prefix = "genres_"
+        }
+
+        // For now, clear the entire cache. A more sophisticated implementation
+        // would track cache keys and only remove those matching the prefix.
+        // This is acceptable since cache is per-instance and will be rebuilt quickly.
+        cache.clear()
+        AppLogger.network.debug("Library cache invalidated for category: \(category.displayName)")
+    }
+
+    func refreshCache(for category: LibraryCategory) async throws {
+        // Invalidate existing cache and fetch fresh data
+        invalidateCache(for: category)
+
+        // Fetch fresh data with forceRefresh
+        switch category {
+        case .artists:
+            try await fetchArtists(forceRefresh: true)
+        case .albums:
+            try await fetchAlbums(for: nil, forceRefresh: true)
+        case .tracks:
+            try await fetchTracks(for: nil, forceRefresh: true)
+        case .playlists:
+            try await fetchPlaylists(forceRefresh: true)
+        case .radio:
+            try await fetchRadios(forceRefresh: true)
+        case .genres:
+            try await fetchGenres(forceRefresh: true)
+        }
     }
 
     // Methods to be added in subsequent tasks:

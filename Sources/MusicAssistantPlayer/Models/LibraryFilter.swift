@@ -3,7 +3,7 @@
 
 import Foundation
 
-struct LibraryFilter {
+struct LibraryFilter: Hashable {
     var provider: String?
     var genre: String?
     var yearRange: ClosedRange<Int>?
