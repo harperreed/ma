@@ -11,6 +11,7 @@ class LibraryService: ObservableObject {
     @Published var albums: [Album] = []
     @Published var playlists: [Playlist] = []
     @Published var tracks: [Track] = []
+    @Published var providers: [String] = []
     @Published var error: String?
 
     private(set) var client: MusicAssistantClient?
@@ -312,6 +313,50 @@ class LibraryService: ObservableObject {
                 duration: duration,
                 artworkURL: artworkURL
             )
+        }
+    }
+
+    // MARK: - Fetch Providers
+
+    func fetchProviders() async throws {
+        guard let client = client else {
+            self.error = "No client available"
+            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+        }
+
+        do {
+            // Music Assistant API: get configured music providers
+            let result = try await client.sendCommand(command: "music/providers")
+
+            if let result = result {
+                let providerNames = parseProviders(from: result)
+                self.providers = providerNames
+                self.error = nil
+            } else {
+                self.providers = []
+                self.error = nil
+            }
+        } catch {
+            self.error = "Failed to fetch providers: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
+    private func parseProviders(from data: AnyCodable) -> [String] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            // Extract provider name - try different possible keys
+            if let name = item["name"] as? String {
+                return name
+            } else if let type = item["type"] as? String {
+                return type
+            } else if let instanceId = item["instance_id"] as? String {
+                return instanceId
+            }
+            return nil
         }
     }
 

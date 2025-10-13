@@ -70,7 +70,7 @@ struct RoonStyleMainWindowView: View {
                     if isLibrarySidebarVisible && shouldShowSidebar(for: geometry.size) {
                         LibrarySidebarView(
                             selectedCategory: $selectedLibraryCategory,
-                            providers: [] // TODO: Get providers from service
+                            providers: libraryService.providers
                         )
                         .frame(width: LayoutConstants.sidebarWidth)
                         .onChange(of: selectedLibraryCategory) { _, newCategory in
@@ -248,6 +248,9 @@ struct RoonStyleMainWindowView: View {
 
         // Load initial library content (default category is artists)
         await libraryViewModel.loadContent()
+
+        // Fetch music providers for sidebar
+        try? await libraryService.fetchProviders()
     }
 
     private func fetchInitialData() async {
