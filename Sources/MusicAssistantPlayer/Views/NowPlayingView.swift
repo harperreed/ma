@@ -47,6 +47,7 @@ struct NowPlayingView: View {
                         .lineLimit(1)
                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
                     }
+                    .frame(maxWidth: controlsMaxWidth(for: geometry.size))
                     .padding(.horizontal)
 
                     // Player controls
