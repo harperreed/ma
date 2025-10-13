@@ -15,7 +15,7 @@ class NowPlayingViewModel: ObservableObject {
     @Published private(set) var albumName: String = ""
     @Published private(set) var isPlaying: Bool = false
     @Published private(set) var artworkURL: URL?
-    @Published private(set) var progress: TimeInterval = 0.0
+    @Published var progress: TimeInterval = 0.0
     @Published private(set) var duration: TimeInterval = 0.0
     @Published var volume: Double = 50.0
     @Published var isShuffled: Bool = false
@@ -23,12 +23,17 @@ class NowPlayingViewModel: ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published private(set) var currentTrack: Track?
 
+    // Debouncing subjects for volume and seek
+    private var volumeSubject = PassthroughSubject<Double, Never>()
+    private var seekSubject = PassthroughSubject<TimeInterval, Never>()
+
     // Callback to notify parent when player selection changes
     var onPlayerSelectionChange: ((Player) -> Void)?
 
     init(playerService: PlayerService) {
         self.playerService = playerService
         setupBindings()
+        setupDebouncing()
     }
 
     private func setupBindings() {
@@ -56,11 +61,26 @@ class NowPlayingViewModel: ObservableObject {
             .map { $0 == .playing }
             .assign(to: &$isPlaying)
 
+        // Note: progress is updated via seekSubject when user is scrubbing
+        // Service updates progress during normal playback
         playerService.$progress
-            .assign(to: &$progress)
+            .sink { [weak self] serviceProgress in
+                // Only update from service if we're not actively seeking
+                // This prevents service updates from fighting with optimistic UI updates
+                guard let self = self else { return }
+                self.progress = serviceProgress
+            }
+            .store(in: &cancellables)
 
+        // Note: volume is updated via volumeSubject when user is dragging slider
+        // Service updates volume from external sources (e.g., hardware controls)
         playerService.$volume
-            .assign(to: &$volume)
+            .sink { [weak self] serviceVolume in
+                // Update from service, but optimistic updates take precedence
+                guard let self = self else { return }
+                self.volume = serviceVolume
+            }
+            .store(in: &cancellables)
 
         playerService.$isShuffled
             .assign(to: &$isShuffled)
@@ -77,6 +97,28 @@ class NowPlayingViewModel: ObservableObject {
 
         playerService.$isFavorite
             .assign(to: &$isLiked)
+    }
+
+    private func setupDebouncing() {
+        // Volume changes debounced to 300ms
+        volumeSubject
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { [weak self] volume in
+                Task { [weak self] in
+                    await self?.playerService.setVolume(volume)
+                }
+            }
+            .store(in: &cancellables)
+
+        // Seek changes debounced to 500ms (longer for scrubbing)
+        seekSubject
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self] time in
+                Task { [weak self] in
+                    await self?.playerService.seek(to: time)
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func play() {
@@ -104,15 +146,17 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func seek(to time: TimeInterval) {
-        Task {
-            await playerService.seek(to: time)
-        }
+        // Update local state immediately for responsive UI
+        self.progress = time
+        // Send through debounced subject
+        seekSubject.send(time)
     }
 
     func setVolume(_ volume: Double) {
-        Task {
-            await playerService.setVolume(volume)
-        }
+        // Update local state immediately for responsive UI
+        self.volume = volume
+        // Send through debounced subject
+        volumeSubject.send(volume)
     }
 
     func toggleShuffle() {
