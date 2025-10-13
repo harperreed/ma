@@ -50,13 +50,19 @@ struct LibraryBrowseView: View {
                 onPlayNow: { onPlayNow($0.id, .album) },
                 onAddToQueue: { onAddToQueue($0.id, .album) }
             )
+        case .tracks:
+            TracksListView(
+                tracks: viewModel.tracks,
+                onPlayNow: { onPlayNow($0.id, .track) },
+                onAddToQueue: { onAddToQueue($0.id, .track) }
+            )
         case .playlists:
             PlaylistsListView(
                 playlists: viewModel.playlists,
                 onPlayNow: { onPlayNow($0.id, .playlist) },
                 onAddToQueue: { onAddToQueue($0.id, .playlist) }
             )
-        default:
+        case .radio, .genres:
             Text("Coming Soon")
                 .foregroundColor(.white.opacity(0.5))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

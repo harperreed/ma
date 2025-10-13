@@ -29,6 +29,10 @@ class LibraryViewModel: ObservableObject {
         libraryService.playlists
     }
 
+    var tracks: [Track] {
+        libraryService.tracks
+    }
+
     var errorMessage: String? {
         libraryService.error
     }
@@ -44,10 +48,12 @@ class LibraryViewModel: ObservableObject {
                 try await libraryService.fetchArtists()
             case .albums:
                 try await libraryService.fetchAlbums(for: nil)
+            case .tracks:
+                try await libraryService.fetchTracks(for: nil)
             case .playlists:
                 try await libraryService.fetchPlaylists()
-            default:
-                // TODO: Implement other categories
+            case .radio, .genres:
+                // TODO: Implement radio and genres categories
                 break
             }
         } catch {
