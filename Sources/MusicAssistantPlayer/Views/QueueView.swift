@@ -65,7 +65,48 @@ struct QueueView: View {
                             QueueTrackRow(
                                 track: track,
                                 index: index + 1,
-                                isCurrentTrack: track.id == currentTrack?.id
+                                isCurrentTrack: track.id == currentTrack?.id,
+                                isFirstTrack: index == 0,
+                                isLastTrack: index == viewModel.tracks.count - 1,
+                                onRemove: {
+                                    Task {
+                                        guard let queueId = viewModel.queueId else {
+                                            viewModel.errorMessage = "No queue available"
+                                            return
+                                        }
+                                        await viewModel.removeTrack(id: track.id, from: queueId)
+                                    }
+                                },
+                                onMoveUp: {
+                                    guard index > 0 else { return }
+                                    Task {
+                                        guard let queueId = viewModel.queueId else {
+                                            viewModel.errorMessage = "No queue available"
+                                            return
+                                        }
+                                        await viewModel.moveTrack(
+                                            id: track.id,
+                                            from: index,
+                                            to: index - 1,
+                                            in: queueId
+                                        )
+                                    }
+                                },
+                                onMoveDown: {
+                                    guard index < viewModel.tracks.count - 1 else { return }
+                                    Task {
+                                        guard let queueId = viewModel.queueId else {
+                                            viewModel.errorMessage = "No queue available"
+                                            return
+                                        }
+                                        await viewModel.moveTrack(
+                                            id: track.id,
+                                            from: index,
+                                            to: index + 1,
+                                            in: queueId
+                                        )
+                                    }
+                                }
                             )
 
                             if index < viewModel.tracks.count - 1 {
@@ -201,6 +242,11 @@ struct QueueTrackRow: View {
     let track: Track
     let index: Int
     let isCurrentTrack: Bool
+    let isFirstTrack: Bool
+    let isLastTrack: Bool
+    let onRemove: () -> Void
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -263,6 +309,23 @@ struct QueueTrackRow: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(isCurrentTrack ? Color.green.opacity(0.1) : Color.clear)
+        .contextMenu {
+            Button(action: onRemove) {
+                Label("Remove from Queue", systemImage: "trash")
+            }
+
+            if !isFirstTrack {
+                Button(action: onMoveUp) {
+                    Label("Move Up", systemImage: "arrow.up")
+                }
+            }
+
+            if !isLastTrack {
+                Button(action: onMoveDown) {
+                    Label("Move Down", systemImage: "arrow.down")
+                }
+            }
+        }
     }
 
     private var thumbnailPlaceholder: some View {
@@ -285,8 +348,11 @@ struct QueueTrackRow: View {
         Track(id: "3", title: "Track Three", artist: "Artist Three", album: "Album", duration: 220, artworkURL: nil)
     ]
 
+    // Create a mock player service for preview
+    let playerService = PlayerService(client: nil)
+
     return QueueView(
-        viewModel: QueueViewModel(queueService: queueService),
+        viewModel: QueueViewModel(queueService: queueService, playerService: playerService),
         currentTrack: Track(id: "1", title: "Track One", artist: "Artist One", album: "Album", duration: 180, artworkURL: nil)
     )
         .frame(width: 350, height: 600)
