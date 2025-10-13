@@ -33,6 +33,7 @@ struct AlbumArtView: View {
                         placeholderImage
                     }
                 }
+                .id(url) // Force view recreation when URL changes to clear old image
             } else {
                 placeholderImage
             }
