@@ -31,18 +31,20 @@ struct MainWindowView: View {
     var body: some View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
-                // Sidebar (responsive width)
-                SidebarView(
-                    selectedPlayer: $selectedPlayer,
-                    availablePlayers: availablePlayers,
-                    connectionState: playerService.connectionState,
-                    serverHost: serverConfig.host,
-                    onRetry: handleRetry
-                )
-                .frame(width: sidebarWidth(for: geometry.size))
-                .onChange(of: selectedPlayer) { oldValue, newValue in
-                    if let player = newValue {
-                        handlePlayerSelection(player)
+                // Sidebar (responsive width, hides in miniplayer mode)
+                if shouldShowSidebar(for: geometry.size) {
+                    SidebarView(
+                        selectedPlayer: $selectedPlayer,
+                        availablePlayers: availablePlayers,
+                        connectionState: playerService.connectionState,
+                        serverHost: serverConfig.host,
+                        onRetry: handleRetry
+                    )
+                    .frame(width: sidebarWidth(for: geometry.size))
+                    .onChange(of: selectedPlayer) { oldValue, newValue in
+                        if let player = newValue {
+                            handlePlayerSelection(player)
+                        }
                     }
                 }
 
@@ -97,6 +99,11 @@ struct MainWindowView: View {
     private func shouldShowQueue(for size: CGSize) -> Bool {
         // Hide queue on smaller windows to prioritize now playing with large album art
         size.width >= 1000
+    }
+
+    private func shouldShowSidebar(for size: CGSize) -> Bool {
+        // Hide sidebar on very small windows for miniplayer mode
+        size.width >= 700
     }
 
     private func fetchInitialData() async {
