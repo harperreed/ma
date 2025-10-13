@@ -43,7 +43,7 @@ struct MusicAssistantPlayerApp: App {
                     // TODO: Implement queue window/popover
                     print("Show queue from menubar")
                 }
-                .keyboardShortcut("q", modifiers: [.command])
+                .keyboardShortcut("q", modifiers: [.command, .shift])
             }
         }
     }
