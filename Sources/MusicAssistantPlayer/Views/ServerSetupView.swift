@@ -114,6 +114,13 @@ struct ServerSetupView: View {
             return
         }
 
+        // Validate configuration
+        if let error = NetworkValidator.validateServerConfig(host: host, port: portInt) {
+            connectionStatus = error
+            connectionSuccess = false
+            return
+        }
+
         isConnecting = true
         connectionStatus = ""
 
