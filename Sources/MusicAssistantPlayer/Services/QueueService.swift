@@ -88,47 +88,47 @@ class QueueService: ObservableObject {
 
     func clearQueue() async throws {
         guard let queueId = queueId else {
-            throw QueueError.queueEmpty
+            throw QueueError.queueNotFound("No queue ID available")
         }
         guard let client = client else {
-            throw QueueError.networkFailure
+            throw QueueError.networkError("No client available")
         }
 
         do {
             try await client.clearQueue(queueId: queueId)
             self.upcomingTracks = []
         } catch {
-            throw QueueError.networkFailure
+            throw QueueError.networkError(error.localizedDescription)
         }
     }
 
     func shuffle(enabled: Bool) async throws {
         guard let queueId = queueId else {
-            throw QueueError.queueEmpty
+            throw QueueError.queueNotFound("No queue ID available")
         }
         guard let client = client else {
-            throw QueueError.networkFailure
+            throw QueueError.networkError("No client available")
         }
 
         do {
             try await client.shuffle(queueId: queueId, enabled: enabled)
         } catch {
-            throw QueueError.networkFailure
+            throw QueueError.networkError(error.localizedDescription)
         }
     }
 
     func setRepeat(mode: String) async throws {
         guard let queueId = queueId else {
-            throw QueueError.queueEmpty
+            throw QueueError.queueNotFound("No queue ID available")
         }
         guard let client = client else {
-            throw QueueError.networkFailure
+            throw QueueError.networkError("No client available")
         }
 
         do {
             try await client.setRepeat(queueId: queueId, mode: mode)
         } catch {
-            throw QueueError.networkFailure
+            throw QueueError.networkError(error.localizedDescription)
         }
     }
 }

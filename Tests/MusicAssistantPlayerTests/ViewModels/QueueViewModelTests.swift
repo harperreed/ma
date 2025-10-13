@@ -44,8 +44,8 @@ final class QueueViewModelTests: XCTestCase {
             try await viewModel.clearQueue()
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            // Expected - should throw network failure
-            XCTAssertEqual(error, .networkFailure)
+            // Expected - should throw network error
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -74,7 +74,7 @@ final class QueueViewModelTests: XCTestCase {
             try await viewModel.shuffle(enabled: true)
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .networkFailure)
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -90,7 +90,7 @@ final class QueueViewModelTests: XCTestCase {
             try await viewModel.setRepeat(mode: "one")
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .networkFailure)
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }

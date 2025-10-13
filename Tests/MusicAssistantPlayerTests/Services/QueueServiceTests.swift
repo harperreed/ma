@@ -29,7 +29,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.clearQueue()
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .networkFailure)
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -43,7 +43,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.clearQueue()
             XCTFail("Should throw error when queueId is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .queueEmpty)
+            XCTAssertTrue(error.localizedDescription.contains("Queue not found"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -58,7 +58,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.shuffle(enabled: true)
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .networkFailure)
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -72,7 +72,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.shuffle(enabled: true)
             XCTFail("Should throw error when queueId is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .queueEmpty)
+            XCTAssertTrue(error.localizedDescription.contains("Queue not found"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -87,7 +87,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.setRepeat(mode: "all")
             XCTFail("Should throw error when client is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .networkFailure)
+            XCTAssertTrue(error.localizedDescription.contains("Network error"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
@@ -101,7 +101,7 @@ final class QueueServiceTests: XCTestCase {
             try await service.setRepeat(mode: "all")
             XCTFail("Should throw error when queueId is nil")
         } catch let error as QueueError {
-            XCTAssertEqual(error, .queueEmpty)
+            XCTAssertTrue(error.localizedDescription.contains("Queue not found"))
         } catch {
             XCTFail("Wrong error type: \(error)")
         }

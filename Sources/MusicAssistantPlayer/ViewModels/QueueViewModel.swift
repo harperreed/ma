@@ -33,7 +33,7 @@ class QueueViewModel: ObservableObject {
             try await queueService.clearQueue()
             errorMessage = nil
         } catch let error as QueueError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             throw error
         }
     }
@@ -46,7 +46,7 @@ class QueueViewModel: ObservableObject {
             try await queueService.shuffle(enabled: enabled)
             errorMessage = nil
         } catch let error as QueueError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             throw error
         }
     }
@@ -59,7 +59,7 @@ class QueueViewModel: ObservableObject {
             try await queueService.setRepeat(mode: mode)
             errorMessage = nil
         } catch let error as QueueError {
-            errorMessage = error.userMessage
+            errorMessage = error.localizedDescription
             throw error
         }
     }
