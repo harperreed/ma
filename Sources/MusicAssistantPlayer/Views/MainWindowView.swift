@@ -169,6 +169,9 @@ struct MainWindowView: View {
     }
 
     private func subscribeToPlayerUpdates() {
+        // Cancel existing subscription to prevent multiple concurrent listeners
+        playerUpdateTask?.cancel()
+
         playerUpdateTask = Task { @MainActor in
             // Subscribe to player update events
             for await _ in await client.events.playerUpdates.values {
