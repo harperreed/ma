@@ -314,4 +314,22 @@ final class PlayerServiceTests: XCTestCase {
             XCTFail("Expected playerNotFound for setVolume()")
         }
     }
+
+    @MainActor
+    func testGroupPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        await service.group(targetPlayerId: "player2")
+
+        XCTAssertNotNil(service.lastError)
+    }
+
+    @MainActor
+    func testUngroupPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        await service.ungroup()
+
+        XCTAssertNotNil(service.lastError)
+    }
 }

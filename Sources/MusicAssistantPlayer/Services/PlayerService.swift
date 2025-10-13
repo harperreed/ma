@@ -271,4 +271,44 @@ class PlayerService: ObservableObject {
             lastError = .commandFailed("set volume", reason: error.localizedDescription)
         }
     }
+
+    func group(targetPlayerId: String) async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            AppLogger.player.info("Grouping player \(player.name) with \(targetPlayerId)")
+            try await client.group(playerId: player.id, targetPlayer: targetPlayerId)
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "group(targetPlayerId:)")
+            self.lastError = error
+        } catch {
+            AppLogger.errors.logError(error, context: "group(targetPlayerId:)")
+            self.lastError = .commandFailed("group", reason: error.localizedDescription)
+        }
+    }
+
+    func ungroup() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            AppLogger.player.info("Ungrouping player \(player.name)")
+            try await client.ungroup(playerId: player.id)
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "ungroup()")
+            self.lastError = error
+        } catch {
+            AppLogger.errors.logError(error, context: "ungroup()")
+            self.lastError = .commandFailed("ungroup", reason: error.localizedDescription)
+        }
+    }
 }
