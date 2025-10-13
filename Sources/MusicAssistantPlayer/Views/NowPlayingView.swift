@@ -7,6 +7,7 @@ struct NowPlayingView: View {
     @ObservedObject var viewModel: NowPlayingViewModel
     @Binding var selectedPlayer: Player?
     let availablePlayers: [Player]
+    @ObservedObject var imageCacheService: ImageCacheService
 
     var body: some View {
         GeometryReader { geometry in
@@ -86,7 +87,7 @@ struct NowPlayingView: View {
                 // causing text to be cut off. Need to find a way to render background
                 // without affecting GeometryReader sizing.
                 // .background(
-                //     BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
+                //     BlurredArtworkBackground(artworkURL: viewModel.artworkURL, cacheService: imageCacheService)
                 // )
                 .overlay(
                     // Show menu button in miniplayer mode (< 700px width)
@@ -173,7 +174,8 @@ struct NowPlayingView: View {
                         syncedTo: nil,
                         activeGroup: nil
                     )
-                ]
+                ],
+                imageCacheService: ImageCacheService()
             )
         }
     }

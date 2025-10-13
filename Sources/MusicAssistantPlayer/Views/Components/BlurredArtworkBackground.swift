@@ -5,6 +5,7 @@ import SwiftUI
 
 struct BlurredArtworkBackground: View {
     let artworkURL: URL?
+    let cacheService: ImageCacheService
     @State private var dominantColor: Color?
     @State private var loadedImage: NSImage?
 
@@ -45,17 +46,40 @@ struct BlurredArtworkBackground: View {
 
     #if canImport(AppKit)
     private func extractColor(from url: URL) async {
+        // Check cache first
+        if let cachedColor = cacheService.getColor(for: url) {
+            await MainActor.run {
+                self.dominantColor = cachedColor
+            }
+            return
+        }
+
+        // Check for cached image
+        if let cachedImage = cacheService.getImage(for: url) {
+            extractAndCacheColor(from: cachedImage, url: url)
+            return
+        }
+
         // Download and extract color from actual image
         guard let (data, _) = try? await URLSession.shared.data(from: url),
               let nsImage = NSImage(data: data) else {
             return
         }
 
+        // Cache the downloaded image
+        cacheService.cacheImage(nsImage, for: url)
+
+        extractAndCacheColor(from: nsImage, url: url)
+    }
+
+    private func extractAndCacheColor(from image: NSImage, url: URL) {
         let extractor = ColorExtractor()
-        if let color = extractor.extractDominantColor(from: nsImage) {
-            await MainActor.run {
-                self.dominantColor = color
-            }
+        if let color = extractor.extractDominantColor(from: image) {
+            // Cache the extracted color
+            cacheService.cacheColor(color, for: url)
+
+            // Update state on main actor
+            self.dominantColor = color
         }
     }
     #endif
@@ -63,6 +87,7 @@ struct BlurredArtworkBackground: View {
 
 #Preview {
     BlurredArtworkBackground(
-        artworkURL: URL(string: "https://picsum.photos/400")
+        artworkURL: URL(string: "https://picsum.photos/400"),
+        cacheService: ImageCacheService()
     )
 }

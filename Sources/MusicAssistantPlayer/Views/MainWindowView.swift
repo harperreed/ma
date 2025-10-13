@@ -11,6 +11,7 @@ struct MainWindowView: View {
     @StateObject private var playerService: PlayerService
     @StateObject private var queueService: QueueService
     @StateObject private var nowPlayingViewModel: NowPlayingViewModel
+    @StateObject private var imageCacheService: ImageCacheService
 
     @State private var selectedPlayer: Player?
     @State private var availablePlayers: [Player] = []
@@ -23,11 +24,13 @@ struct MainWindowView: View {
         // Create services
         let playerSvc = PlayerService(client: client)
         let queueSvc = QueueService(client: client)
+        let imageCacheSvc = ImageCacheService()
 
         // Initialize StateObjects
         _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)
         _nowPlayingViewModel = StateObject(wrappedValue: NowPlayingViewModel(playerService: playerSvc))
+        _imageCacheService = StateObject(wrappedValue: imageCacheSvc)
     }
 
     var body: some View {
@@ -54,7 +57,8 @@ struct MainWindowView: View {
                 NowPlayingView(
                     viewModel: nowPlayingViewModel,
                     selectedPlayer: $selectedPlayer,
-                    availablePlayers: availablePlayers
+                    availablePlayers: availablePlayers,
+                    imageCacheService: imageCacheService
                 )
                 .frame(maxWidth: .infinity)
                 .onAppear {
