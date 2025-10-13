@@ -51,10 +51,11 @@ struct LibraryBrowseView: View {
                 onAddToQueue: { onAddToQueue($0.id, .album) }
             )
         case .playlists:
-            // Will be implemented in PlaylistsListView component
-            Text("Playlists View Coming Soon")
-                .foregroundColor(.white.opacity(0.5))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PlaylistsListView(
+                playlists: viewModel.playlists,
+                onPlayNow: { onPlayNow($0.id, .playlist) },
+                onAddToQueue: { onAddToQueue($0.id, .playlist) }
+            )
         default:
             Text("Coming Soon")
                 .foregroundColor(.white.opacity(0.5))
