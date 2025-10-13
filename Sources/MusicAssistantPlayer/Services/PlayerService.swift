@@ -543,8 +543,12 @@ class PlayerService: ObservableObject {
             if let result = result,
                let trackData = result.value as? [String: Any],
                let favorite = trackData["favorite"] as? Bool {
+                // Verify track hasn't changed before updating state
+                guard self.currentTrack?.id == trackId else { return }
                 self.isFavorite = favorite
             } else {
+                // Verify track hasn't changed before updating state
+                guard self.currentTrack?.id == trackId else { return }
                 self.isFavorite = false
             }
 

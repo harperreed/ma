@@ -41,7 +41,7 @@ struct MusicAssistantPlayerApp: App {
             CommandMenu("Queue") {
                 Button("Show Queue") {
                     // TODO: Implement queue window/popover
-                    print("Show queue from menubar")
+                    AppLogger.ui.info("Show queue from menubar")
                 }
                 .keyboardShortcut("q", modifiers: [.command, .shift])
             }
@@ -54,14 +54,14 @@ struct MusicAssistantPlayerApp: App {
         Task {
             do {
                 try await newClient.connect()
-                print("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
+                AppLogger.network.info("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
 
                 // Only set client after successful connection
                 await MainActor.run {
                     self.client = newClient
                 }
             } catch {
-                print("Connection failed: \(error)")
+                AppLogger.errors.logError(error, context: "Connection failed")
                 // Clear client on failure so user can retry
                 await MainActor.run {
                     self.client = nil

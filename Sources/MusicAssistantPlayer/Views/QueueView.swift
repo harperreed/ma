@@ -8,8 +8,6 @@ struct QueueView: View {
     let currentTrack: Track?
 
     @State private var showClearConfirmation = false
-    @State private var isShuffleEnabled = false
-    @State private var repeatMode = "off" // "off", "all", "one"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -125,30 +123,25 @@ struct QueueView: View {
             ToolbarItemGroup {
                 // Shuffle button
                 Button(action: {
-                    let previousState = isShuffleEnabled
-                    isShuffleEnabled.toggle()
                     Task {
-                        do {
-                            try await viewModel.shuffle(enabled: isShuffleEnabled)
-                        } catch {
-                            // Rollback on failure
-                            isShuffleEnabled = previousState
-                        }
+                        await viewModel.toggleShuffle()
                     }
                 }) {
-                    Image(systemName: isShuffleEnabled ? "shuffle.circle.fill" : "shuffle")
-                        .foregroundColor(isShuffleEnabled ? .green : .white.opacity(0.7))
+                    Image(systemName: viewModel.isShuffled ? "shuffle.circle.fill" : "shuffle")
+                        .foregroundColor(viewModel.isShuffled ? .green : .white.opacity(0.7))
                 }
                 .help("Shuffle")
 
                 // Repeat button
                 Button(action: {
-                    cycleRepeatMode()
+                    Task {
+                        await viewModel.cycleRepeatMode()
+                    }
                 }) {
                     Image(systemName: repeatModeIcon)
-                        .foregroundColor(repeatMode != "off" ? .green : .white.opacity(0.7))
+                        .foregroundColor(viewModel.repeatMode != "off" ? .green : .white.opacity(0.7))
                 }
-                .help("Repeat: \(repeatMode)")
+                .help("Repeat: \(viewModel.repeatMode)")
 
                 // Clear queue button
                 Button(action: {
@@ -191,37 +184,13 @@ struct QueueView: View {
     }
 
     private var repeatModeIcon: String {
-        switch repeatMode {
+        switch viewModel.repeatMode {
         case "all":
             return "repeat.circle.fill"
         case "one":
             return "repeat.1.circle.fill"
         default:
             return "repeat"
-        }
-    }
-
-    private func cycleRepeatMode() {
-        let previousMode = repeatMode
-
-        switch repeatMode {
-        case "off":
-            repeatMode = "all"
-        case "all":
-            repeatMode = "one"
-        case "one":
-            repeatMode = "off"
-        default:
-            repeatMode = "off"
-        }
-
-        Task {
-            do {
-                try await viewModel.setRepeat(mode: repeatMode)
-            } catch {
-                // Rollback on failure
-                repeatMode = previousMode
-            }
         }
     }
 

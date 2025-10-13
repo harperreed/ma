@@ -13,6 +13,17 @@ struct LibraryFilter: Hashable {
         provider == nil && genre == nil && yearRange == nil && !favoriteOnly
     }
 
+    var cacheKey: String {
+        var components: [String] = []
+        if let provider = provider { components.append("p:\(provider)") }
+        if let genre = genre { components.append("g:\(genre)") }
+        if let yearRange = yearRange {
+            components.append("y:\(yearRange.lowerBound)-\(yearRange.upperBound)")
+        }
+        if favoriteOnly { components.append("fav") }
+        return components.isEmpty ? "default" : components.joined(separator: "_")
+    }
+
     func toAPIArgs() -> [String: Any] {
         var args: [String: Any] = [:]
 

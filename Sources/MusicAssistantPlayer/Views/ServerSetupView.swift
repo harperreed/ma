@@ -164,6 +164,6 @@ struct ServerSetupView: View {
 
 #Preview {
     ServerSetupView { _ in
-        print("Connected")
+        AppLogger.network.info("Connected")
     }
 }

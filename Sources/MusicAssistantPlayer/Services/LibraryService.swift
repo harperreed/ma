@@ -44,13 +44,20 @@ class LibraryService: ObservableObject {
             throw error
         }
 
-        let fetchLimit = limit ?? pageSize
-        let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
 
+        // Reset pagination if sort or filter changed
+        if sortBy != currentSort || filterBy != currentFilter {
+            currentOffset = 0
+            hasMoreItems = false
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         // Build cache key from sort and filter parameters
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "artists_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -169,7 +176,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key from sort, filter, and artist parameters
         let artistKey = artistId ?? "all"
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "albums_\(artistKey)_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -306,7 +313,7 @@ class LibraryService: ObservableObject {
         let filterBy = filter ?? currentFilter
 
         // Build cache key
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "playlists_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -428,7 +435,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key
         let albumKey = albumId ?? "all"
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "tracks_\(albumKey)_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -573,7 +580,7 @@ class LibraryService: ObservableObject {
         let filterBy = filter ?? currentFilter
 
         // Build cache key
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "radios_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -689,7 +696,7 @@ class LibraryService: ObservableObject {
         let filterBy = filter ?? currentFilter
 
         // Build cache key
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "genres_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -980,13 +987,20 @@ class LibraryService: ObservableObject {
             throw error
         }
 
-        let fetchLimit = limit ?? pageSize
-        let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
 
+        // Reset pagination if sort or filter changed
+        if sortBy != currentSort || filterBy != currentFilter {
+            currentOffset = 0
+            hasMoreItems = false
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         // Build cache key from sort and filter parameters
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "artists_favorite_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -1060,13 +1074,20 @@ class LibraryService: ObservableObject {
             throw error
         }
 
-        let fetchLimit = limit ?? pageSize
-        let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
 
+        // Reset pagination if sort or filter changed
+        if sortBy != currentSort || filterBy != currentFilter {
+            currentOffset = 0
+            hasMoreItems = false
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         // Build cache key from sort and filter parameters
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "albums_favorite_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -1140,13 +1161,20 @@ class LibraryService: ObservableObject {
             throw error
         }
 
-        let fetchLimit = limit ?? pageSize
-        let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
 
+        // Reset pagination if sort or filter changed
+        if sortBy != currentSort || filterBy != currentFilter {
+            currentOffset = 0
+            hasMoreItems = false
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         // Build cache key from sort and filter parameters
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "tracks_favorite_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
@@ -1220,13 +1248,20 @@ class LibraryService: ObservableObject {
             throw error
         }
 
-        let fetchLimit = limit ?? pageSize
-        let fetchOffset = offset ?? currentOffset
         let sortBy = sort ?? currentSort
         let filterBy = filter ?? currentFilter
 
+        // Reset pagination if sort or filter changed
+        if sortBy != currentSort || filterBy != currentFilter {
+            currentOffset = 0
+            hasMoreItems = false
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         // Build cache key from sort and filter parameters
-        let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
+        let filterKey = filterBy.isEmpty ? "default" : filterBy.cacheKey
         let cacheKey = "playlists_favorite_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)

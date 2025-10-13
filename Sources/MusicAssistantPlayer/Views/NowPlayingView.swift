@@ -132,7 +132,7 @@ struct NowPlayingView: View {
                                 },
                                 onShowQueue: {
                                     // TODO: Implement queue popover in next task
-                                    print("Show queue requested")
+                                    AppLogger.ui.info("Show queue requested")
                                 }
                             )
                         }
