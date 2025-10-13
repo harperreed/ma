@@ -3,7 +3,7 @@
 
 import Foundation
 
-enum QueueError: LocalizedError {
+enum QueueError: LocalizedError, Equatable {
     case networkFailure
     case queueEmpty
     case unknown(String)
@@ -21,5 +21,17 @@ enum QueueError: LocalizedError {
 
     var errorDescription: String? {
         userMessage
+    }
+
+    static func == (lhs: QueueError, rhs: QueueError) -> Bool {
+        switch (lhs, rhs) {
+        case (.networkFailure, .networkFailure),
+             (.queueEmpty, .queueEmpty):
+            return true
+        case (.unknown(let a), .unknown(let b)):
+            return a == b
+        default:
+            return false
+        }
     }
 }

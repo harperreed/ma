@@ -19,4 +19,21 @@ final class QueueErrorTests: XCTestCase {
         let error = QueueError.unknown("Something went wrong")
         XCTAssertEqual(error.userMessage, "An error occurred: Something went wrong")
     }
+
+    func testEquatableNetworkFailure() {
+        XCTAssertEqual(QueueError.networkFailure, QueueError.networkFailure)
+    }
+
+    func testEquatableQueueEmpty() {
+        XCTAssertEqual(QueueError.queueEmpty, QueueError.queueEmpty)
+    }
+
+    func testEquatableUnknown() {
+        XCTAssertEqual(QueueError.unknown("test"), QueueError.unknown("test"))
+        XCTAssertNotEqual(QueueError.unknown("test1"), QueueError.unknown("test2"))
+    }
+
+    func testNotEqualDifferentCases() {
+        XCTAssertNotEqual(QueueError.networkFailure, QueueError.queueEmpty)
+    }
 }
