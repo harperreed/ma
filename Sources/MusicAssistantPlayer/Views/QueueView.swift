@@ -84,9 +84,15 @@ struct QueueView: View {
             ToolbarItemGroup {
                 // Shuffle button
                 Button(action: {
+                    let previousState = isShuffleEnabled
                     isShuffleEnabled.toggle()
                     Task {
-                        try? await viewModel.shuffle(enabled: isShuffleEnabled)
+                        do {
+                            try await viewModel.shuffle(enabled: isShuffleEnabled)
+                        } catch {
+                            // Rollback on failure
+                            isShuffleEnabled = previousState
+                        }
                     }
                 }) {
                     Image(systemName: isShuffleEnabled ? "shuffle.circle.fill" : "shuffle")
@@ -118,7 +124,11 @@ struct QueueView: View {
             Button("Cancel", role: .cancel) {}
             Button("Clear", role: .destructive) {
                 Task {
-                    try? await viewModel.clearQueue()
+                    do {
+                        try await viewModel.clearQueue()
+                    } catch {
+                        // Error will be displayed by viewModel
+                    }
                 }
             }
         } message: {
@@ -151,6 +161,8 @@ struct QueueView: View {
     }
 
     private func cycleRepeatMode() {
+        let previousMode = repeatMode
+
         switch repeatMode {
         case "off":
             repeatMode = "all"
@@ -163,7 +175,12 @@ struct QueueView: View {
         }
 
         Task {
-            try? await viewModel.setRepeat(mode: repeatMode)
+            do {
+                try await viewModel.setRepeat(mode: repeatMode)
+            } catch {
+                // Rollback on failure
+                repeatMode = previousMode
+            }
         }
     }
 

@@ -96,9 +96,7 @@ class QueueService: ObservableObject {
 
         do {
             try await client.clearQueue(queueId: queueId)
-            await MainActor.run {
-                self.upcomingTracks = []
-            }
+            self.upcomingTracks = []
         } catch {
             throw QueueError.networkFailure
         }
