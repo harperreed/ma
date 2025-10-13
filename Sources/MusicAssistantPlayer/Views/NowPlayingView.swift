@@ -81,7 +81,7 @@ struct NowPlayingView: View {
 
     private func albumArtSize(for size: CGSize) -> CGFloat {
         let baseSize = min(size.width, size.height) * 0.55
-        return min(max(baseSize, 350), 800)
+        return min(baseSize, 800)
     }
 
     private func titleFontSize(for size: CGSize) -> CGFloat {
