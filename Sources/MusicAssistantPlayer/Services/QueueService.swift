@@ -9,6 +9,7 @@ import MusicAssistantKit
 class QueueService: ObservableObject {
     @Published var upcomingTracks: [Track] = []
     @Published var queueId: String?
+    @Published var lastError: QueueError?
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
@@ -129,6 +130,115 @@ class QueueService: ObservableObject {
             try await client.setRepeat(queueId: queueId, mode: mode)
         } catch {
             throw QueueError.networkError(error.localizedDescription)
+        }
+    }
+
+    func removeItem(itemId: String, from queueId: String) async throws {
+        guard let client = client else {
+            let error = QueueError.networkError("No client available")
+            lastError = error
+            throw error
+        }
+
+        do {
+            AppLogger.player.info("Removing item \(itemId) from queue \(queueId)")
+
+            _ = try await client.sendCommand(
+                command: "player_queues/queue_command",
+                args: [
+                    "queue_id": queueId,
+                    "command": "delete",
+                    "item_id": itemId
+                ]
+            )
+
+            // Refresh queue after removal
+            try await fetchQueue(for: queueId)
+            lastError = nil
+        } catch let error as QueueError {
+            AppLogger.errors.logError(error, context: "removeItem")
+            lastError = error
+            throw error
+        } catch {
+            let queueError = QueueError.commandFailed("removeItem", reason: error.localizedDescription)
+            AppLogger.errors.logError(error, context: "removeItem")
+            lastError = queueError
+            throw queueError
+        }
+    }
+
+    func moveItem(itemId: String, from oldIndex: Int, to newIndex: Int, in queueId: String) async throws {
+        guard let client = client else {
+            let error = QueueError.networkError("No client available")
+            lastError = error
+            throw error
+        }
+
+        do {
+            AppLogger.player.info("Moving item \(itemId) from index \(oldIndex) to \(newIndex)")
+
+            _ = try await client.sendCommand(
+                command: "player_queues/queue_command",
+                args: [
+                    "queue_id": queueId,
+                    "command": "move",
+                    "queue_item_id": itemId,
+                    "pos_shift": newIndex - oldIndex
+                ]
+            )
+
+            // Refresh queue after move
+            try await fetchQueue(for: queueId)
+            lastError = nil
+        } catch let error as QueueError {
+            AppLogger.errors.logError(error, context: "moveItem")
+            lastError = error
+            throw error
+        } catch {
+            let queueError = QueueError.commandFailed("moveItem", reason: error.localizedDescription)
+            AppLogger.errors.logError(error, context: "moveItem")
+            lastError = queueError
+            throw queueError
+        }
+    }
+
+    func addToQueue(uri: String, queueId: String, at position: Int? = nil) async throws {
+        guard let client = client else {
+            let error = QueueError.networkError("No client available")
+            lastError = error
+            throw error
+        }
+
+        do {
+            AppLogger.player.info("Adding \(uri) to queue \(queueId) at position \(position?.description ?? "end")")
+
+            var args: [String: Any] = [
+                "queue_id": queueId,
+                "command": "add",
+                "media_items": [uri]
+            ]
+
+            if let position = position {
+                args["insert_at_index"] = position
+            }
+
+            _ = try await client.sendCommand(
+                command: "player_queues/queue_command",
+                args: args
+            )
+
+            // Refresh queue after addition
+            try await fetchQueue(for: queueId)
+            lastError = nil
+        } catch let error as QueueError {
+            AppLogger.errors.logError(error, context: "addToQueue")
+            lastError = error
+            throw error
+        } catch {
+            let queueError = QueueError.commandFailed("addToQueue", reason: error.localizedDescription)
+            AppLogger.errors.logError(error, context: "addToQueue")
+            lastError = queueError
+            throw queueError
         }
     }
 }

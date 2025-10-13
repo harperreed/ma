@@ -140,4 +140,43 @@ final class QueueServiceTests: XCTestCase {
 
         XCTAssertEqual(service.trackCount, 2)
     }
+
+    @MainActor
+    func testRemoveItemPublishesError() async {
+        let service = QueueService(client: nil)
+        service.queueId = "test-queue"
+
+        do {
+            try await service.removeItem(itemId: "test-item", from: "test-queue")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is QueueError)
+        }
+    }
+
+    @MainActor
+    func testMoveItemPublishesError() async {
+        let service = QueueService(client: nil)
+        service.queueId = "test-queue"
+
+        do {
+            try await service.moveItem(itemId: "test-item", from: 0, to: 5, in: "test-queue")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is QueueError)
+        }
+    }
+
+    @MainActor
+    func testAddToQueueAtPositionPublishesError() async {
+        let service = QueueService(client: nil)
+        service.queueId = "test-queue"
+
+        do {
+            try await service.addToQueue(uri: "track://test", queueId: "test-queue", at: 3)
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is QueueError)
+        }
+    }
 }
