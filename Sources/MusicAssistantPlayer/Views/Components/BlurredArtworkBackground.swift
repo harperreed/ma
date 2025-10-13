@@ -28,6 +28,8 @@ struct BlurredArtworkBackground: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipped()
                             .blur(radius: 70)
                             .opacity(0.4)
                             .transition(.opacity)
@@ -38,6 +40,7 @@ struct BlurredArtworkBackground: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
     }
 
