@@ -45,10 +45,11 @@ struct LibraryBrowseView: View {
                 onAddToQueue: { onAddToQueue($0.id, .artist) }
             )
         case .albums:
-            // Will be implemented in AlbumsGridView component
-            Text("Albums View Coming Soon")
-                .foregroundColor(.white.opacity(0.5))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            AlbumsGridView(
+                albums: viewModel.albums,
+                onPlayNow: { onPlayNow($0.id, .album) },
+                onAddToQueue: { onAddToQueue($0.id, .album) }
+            )
         case .playlists:
             // Will be implemented in PlaylistsListView component
             Text("Playlists View Coming Soon")
