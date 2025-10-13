@@ -124,6 +124,19 @@ struct QueueView: View {
         } message: {
             Text("Are you sure you want to clear all tracks from the queue?")
         }
+        .overlay(alignment: .center) {
+            if viewModel.isLoading {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .scaleEffect(1.5)
+                        .tint(.white)
+                }
+            }
+        }
     }
 
     private var repeatModeIcon: String {

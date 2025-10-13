@@ -11,6 +11,7 @@ class QueueViewModel: ObservableObject {
 
     @Published private(set) var tracks: [Track] = []
     @Published var errorMessage: String?
+    @Published var isLoading = false
 
     init(queueService: QueueService) {
         self.queueService = queueService
@@ -25,6 +26,9 @@ class QueueViewModel: ObservableObject {
     // MARK: - Queue Operations
 
     func clearQueue() async throws {
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             try await queueService.clearQueue()
             errorMessage = nil
@@ -35,6 +39,9 @@ class QueueViewModel: ObservableObject {
     }
 
     func shuffle(enabled: Bool) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             try await queueService.shuffle(enabled: enabled)
             errorMessage = nil
@@ -45,6 +52,9 @@ class QueueViewModel: ObservableObject {
     }
 
     func setRepeat(mode: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             try await queueService.setRepeat(mode: mode)
             errorMessage = nil
