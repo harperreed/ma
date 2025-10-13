@@ -238,6 +238,46 @@ final class QueueViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testQueueIdReturnsSelectedPlayerId() {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Initially nil
+        XCTAssertNil(viewModel.queueId)
+
+        // Create and select a player
+        let player = Player(
+            id: "test-player-123",
+            name: "Test Player",
+            isActive: true,
+            type: .player,
+            groupChildIds: [],
+            syncedTo: nil,
+            activeGroup: nil
+        )
+        playerService.selectedPlayer = player
+
+        // queueId should now return the player's ID
+        XCTAssertEqual(viewModel.queueId, "test-player-123")
+
+        // Change to different player
+        let player2 = Player(
+            id: "another-player-456",
+            name: "Another Player",
+            isActive: true,
+            type: .player,
+            groupChildIds: [],
+            syncedTo: nil,
+            activeGroup: nil
+        )
+        playerService.selectedPlayer = player2
+
+        // queueId should update
+        XCTAssertEqual(viewModel.queueId, "another-player-456")
+    }
+
+    @MainActor
     func testClearErrorResetsState() async {
         let service = QueueService(client: nil)
         let viewModel = QueueViewModel(queueService: service)
