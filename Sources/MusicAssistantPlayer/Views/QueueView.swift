@@ -9,11 +9,22 @@ struct QueueView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("Up Next")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-                .padding()
+            // Header with stats
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Up Next")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    if !viewModel.tracks.isEmpty {
+                        Text("\(viewModel.trackCount) tracks • \(viewModel.totalDuration)")
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                Spacer()
+            }
+            .padding()
 
             Divider()
                 .background(Color.white.opacity(0.1))
