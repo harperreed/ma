@@ -10,9 +10,12 @@ struct LibraryBrowseView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar
-            SearchBar(text: $viewModel.searchQuery)
-                .padding()
+            // Search bar - now with debouncing handled in ViewModel
+            SearchBar(
+                text: $viewModel.searchQuery,
+                placeholder: "Search \(viewModel.selectedCategory.displayName.lowercased())..."
+            )
+            .padding()
 
             // Content area
             ScrollView {
@@ -79,13 +82,14 @@ enum LibraryItemType {
 
 struct SearchBar: View {
     @Binding var text: String
+    var placeholder: String = "Search library..."
 
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.white.opacity(0.5))
 
-            TextField("Search library...", text: $text)
+            TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
                 .foregroundColor(.white)
 

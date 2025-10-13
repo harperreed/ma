@@ -15,9 +15,36 @@ class LibraryViewModel: ObservableObject {
     @Published var selectedFilter: LibraryFilter = LibraryFilter()
 
     private let libraryService: LibraryService
+    private var cancellables = Set<AnyCancellable>()
+    private var searchTask: Task<Void, Never>?
 
     init(libraryService: LibraryService) {
         self.libraryService = libraryService
+        setupSearchDebouncing()
+    }
+
+    private func setupSearchDebouncing() {
+        // Debounce search query changes to avoid searching on every keystroke
+        $searchQuery
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .sink { [weak self] query in
+                self?.searchTask?.cancel()
+                self?.searchTask = Task { [weak self] in
+                    await self?.handleSearchQueryChange(query: query)
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handleSearchQueryChange(query: String) async {
+        if query.isEmpty {
+            // Clear search - reload regular content
+            await loadContent()
+        } else if query.count >= 2 {
+            // Only search if query is at least 2 characters
+            await performSearch(query: query)
+        }
     }
 
     // Properties exposing service data
