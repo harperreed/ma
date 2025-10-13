@@ -9,6 +9,36 @@ struct NowPlayingView: View {
     let availablePlayers: [Player]
     @ObservedObject var imageCacheService: ImageCacheService
 
+    // MARK: - Responsive Layout Constants
+
+    private enum LayoutBreakpoint {
+        static let miniplayerWidth: CGFloat = 700
+        static let smallWindow: CGFloat = 800
+        static let largeWindow: CGFloat = 1200
+    }
+
+    private enum AlbumArtSize {
+        static let sizeMultiplier: CGFloat = 0.55
+        static let maximum: CGFloat = 800
+    }
+
+    private enum FontSize {
+        static let titleSmall: CGFloat = 24
+        static let titleLarge: CGFloat = 28
+        static let metadataSmall: CGFloat = 14
+        static let metadataLarge: CGFloat = 18
+    }
+
+    private enum Spacing {
+        static let small: CGFloat = 16
+        static let large: CGFloat = 24
+    }
+
+    private enum ControlsWidth {
+        static let standard: CGFloat = 600
+        static let large: CGFloat = 700
+    }
+
     var body: some View {
         GeometryReader { geometry in
             // Content
@@ -90,9 +120,9 @@ struct NowPlayingView: View {
                 //     BlurredArtworkBackground(artworkURL: viewModel.artworkURL, cacheService: imageCacheService)
                 // )
                 .overlay(
-                    // Show menu button in miniplayer mode (< 700px width)
+                    // Show menu button in miniplayer mode
                     Group {
-                        if geometry.size.width < 700 {
+                        if geometry.size.width < LayoutBreakpoint.miniplayerWidth {
                             MiniPlayerMenuButton(
                                 selectedPlayer: selectedPlayer,
                                 availablePlayers: availablePlayers,
@@ -113,24 +143,24 @@ struct NowPlayingView: View {
     // MARK: - Responsive Sizing
 
     private func albumArtSize(for size: CGSize) -> CGFloat {
-        let baseSize = min(size.width, size.height) * 0.55
-        return min(baseSize, 800)
+        let baseSize = min(size.width, size.height) * AlbumArtSize.sizeMultiplier
+        return min(baseSize, AlbumArtSize.maximum)
     }
 
     private func titleFontSize(for size: CGSize) -> CGFloat {
-        size.width < 800 ? 24 : 28
+        size.width < LayoutBreakpoint.smallWindow ? FontSize.titleSmall : FontSize.titleLarge
     }
 
     private func metadataFontSize(for size: CGSize) -> CGFloat {
-        size.width < 800 ? 14 : 18
+        size.width < LayoutBreakpoint.smallWindow ? FontSize.metadataSmall : FontSize.metadataLarge
     }
 
     private func responsiveSpacing(for size: CGSize) -> CGFloat {
-        size.width < 800 ? 16 : 24
+        size.width < LayoutBreakpoint.smallWindow ? Spacing.small : Spacing.large
     }
 
     private func controlsMaxWidth(for size: CGSize) -> CGFloat {
-        size.width > 1200 ? 700 : 600
+        size.width > LayoutBreakpoint.largeWindow ? ControlsWidth.large : ControlsWidth.standard
     }
 }
 

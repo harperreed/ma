@@ -17,6 +17,27 @@ struct MainWindowView: View {
     @State private var availablePlayers: [Player] = []
     @State private var playerUpdateTask: Task<Void, Never>?
 
+    // MARK: - Responsive Layout Constants
+
+    private enum LayoutBreakpoint {
+        static let miniplayerWidth: CGFloat = 700
+        static let queueHideWidth: CGFloat = 1000
+        static let mediumWindow: CGFloat = 800
+        static let largeWindow: CGFloat = 1200
+    }
+
+    private enum SidebarWidth {
+        static let small: CGFloat = 180
+        static let medium: CGFloat = 200
+        static let large: CGFloat = 280
+        static let extraLarge: CGFloat = 300
+    }
+
+    private enum QueueWidth {
+        static let small: CGFloat = 280
+        static let large: CGFloat = 300
+    }
+
     init(client: MusicAssistantClient, serverConfig: ServerConfig) {
         self.client = client
         self.serverConfig = serverConfig
@@ -91,35 +112,35 @@ struct MainWindowView: View {
     // MARK: - Responsive Layout
 
     private func sidebarWidth(for size: CGSize) -> CGFloat {
-        if size.width < 800 {
-            return 180  // Narrower on small screens
-        } else if size.width < 1000 {
-            return 200
-        } else if size.width < 1200 {
-            return 280  // Match queue width for centering
+        if size.width < LayoutBreakpoint.mediumWindow {
+            return SidebarWidth.small
+        } else if size.width < LayoutBreakpoint.queueHideWidth {
+            return SidebarWidth.medium
+        } else if size.width < LayoutBreakpoint.largeWindow {
+            return SidebarWidth.large
         } else {
-            return 300  // Match queue width for centering
+            return SidebarWidth.extraLarge
         }
     }
 
     private func queueWidth(for size: CGSize) -> CGFloat {
-        if size.width < 1000 {
-            return 280  // Narrower on small screens
-        } else if size.width < 1200 {
-            return 280  // Match sidebar width for centering
+        if size.width < LayoutBreakpoint.queueHideWidth {
+            return QueueWidth.small
+        } else if size.width < LayoutBreakpoint.largeWindow {
+            return QueueWidth.small
         } else {
-            return 300  // Match sidebar width for centering
+            return QueueWidth.large
         }
     }
 
     private func shouldShowQueue(for size: CGSize) -> Bool {
         // Hide queue on smaller windows to prioritize now playing with large album art
-        size.width >= 1000
+        size.width >= LayoutBreakpoint.queueHideWidth
     }
 
     private func shouldShowSidebar(for size: CGSize) -> Bool {
         // Hide sidebar on very small windows for miniplayer mode
-        size.width >= 700
+        size.width >= LayoutBreakpoint.miniplayerWidth
     }
 
     private func fetchInitialData() async {
