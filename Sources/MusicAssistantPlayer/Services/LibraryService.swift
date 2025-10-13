@@ -16,6 +16,8 @@ class LibraryService: ObservableObject {
     @Published var lastError: LibraryError?
     @Published var hasMoreItems: Bool = false
     @Published var currentOffset: Int = 0
+    @Published var currentSort: LibrarySortOption = .nameAsc
+    @Published var currentFilter: LibraryFilter = LibraryFilter()
     private let pageSize: Int = 50
 
     private(set) var client: MusicAssistantClient?
@@ -24,9 +26,14 @@ class LibraryService: ObservableObject {
         self.client = client
     }
 
-    // MARK: - Task 6: Fetch Artists (with Task 7 pagination)
+    // MARK: - Task 6: Fetch Artists (with Task 7 pagination and Task 8 sorting/filtering)
 
-    func fetchArtists(limit: Int? = nil, offset: Int? = nil) async throws {
+    func fetchArtists(
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
@@ -35,17 +42,25 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
 
         do {
-            AppLogger.network.info("Fetching artists: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
 
-            // Music Assistant API with pagination
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching artists: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
+
+            // Music Assistant API with pagination, sorting, and filtering
             let result = try await client.sendCommand(
                 command: "music/artists/library_items",
-                args: [
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
@@ -113,9 +128,15 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Task 7: Fetch Albums (with pagination)
+    // MARK: - Task 7: Fetch Albums (with pagination and Task 8 sorting/filtering)
 
-    func fetchAlbums(for artistId: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws {
+    func fetchAlbums(
+        for artistId: String? = nil,
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
@@ -124,20 +145,25 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
 
         do {
-            AppLogger.network.info("Fetching albums: limit=\(fetchLimit), offset=\(fetchOffset)")
-
-            // Music Assistant API: music/albums/library_items
             var args: [String: Any] = [
                 "limit": fetchLimit,
-                "offset": fetchOffset
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
             ]
 
             // If artistId is provided, filter by artist
             if let artistId = artistId {
                 args["artist"] = artistId
             }
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching albums: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/albums/library_items",
@@ -225,9 +251,14 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Task 8: Fetch Playlists (with pagination)
+    // MARK: - Fetch Playlists (with pagination and Task 8 sorting/filtering)
 
-    func fetchPlaylists(limit: Int? = nil, offset: Int? = nil) async throws {
+    func fetchPlaylists(
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
@@ -236,17 +267,25 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
 
         do {
-            AppLogger.network.info("Fetching playlists: limit=\(fetchLimit), offset=\(fetchOffset)")
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching playlists: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             // Music Assistant API: music/playlists/library_items
             let result = try await client.sendCommand(
                 command: "music/playlists/library_items",
-                args: [
-                    "limit": fetchLimit,
-                    "offset": fetchOffset
-                ]
+                args: args
             )
 
             if let result = result {
@@ -317,9 +356,15 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Fetch Tracks (with pagination)
+    // MARK: - Fetch Tracks (with pagination and Task 8 sorting/filtering)
 
-    func fetchTracks(for albumId: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws {
+    func fetchTracks(
+        for albumId: String? = nil,
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
@@ -328,20 +373,25 @@ class LibraryService: ObservableObject {
 
         let fetchLimit = limit ?? pageSize
         let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
 
         do {
-            AppLogger.network.info("Fetching tracks: limit=\(fetchLimit), offset=\(fetchOffset)")
-
-            // Music Assistant API: music/tracks/library_items
             var args: [String: Any] = [
                 "limit": fetchLimit,
-                "offset": fetchOffset
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
             ]
 
             // If albumId is provided, filter by album
             if let albumId = albumId {
                 args["album"] = albumId
             }
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching tracks: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
 
             let result = try await client.sendCommand(
                 command: "music/tracks/library_items",
