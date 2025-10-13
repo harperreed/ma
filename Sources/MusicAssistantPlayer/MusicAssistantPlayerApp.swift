@@ -31,6 +31,20 @@ struct MusicAssistantPlayerApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
+
+            CommandMenu("Players") {
+                // Populated dynamically by ContentView state
+                Text("Player selection available in window")
+                    .disabled(true)
+            }
+
+            CommandMenu("Queue") {
+                Button("Show Queue") {
+                    // TODO: Implement queue window/popover
+                    print("Show queue from menubar")
+                }
+                .keyboardShortcut("q", modifiers: [.command])
+            }
         }
     }
 
