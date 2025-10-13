@@ -7,6 +7,10 @@ struct QueueView: View {
     @ObservedObject var viewModel: QueueViewModel
     let currentTrack: Track?
 
+    @State private var showClearConfirmation = false
+    @State private var isShuffleEnabled = false
+    @State private var repeatMode = "off" // "off", "all", "one"
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header with stats
@@ -54,6 +58,78 @@ struct QueueView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.08, green: 0.08, blue: 0.12))
+        .toolbar {
+            ToolbarItemGroup {
+                // Shuffle button
+                Button(action: {
+                    isShuffleEnabled.toggle()
+                    Task {
+                        try? await viewModel.shuffle(enabled: isShuffleEnabled)
+                    }
+                }) {
+                    Image(systemName: isShuffleEnabled ? "shuffle.circle.fill" : "shuffle")
+                        .foregroundColor(isShuffleEnabled ? .green : .white.opacity(0.7))
+                }
+                .help("Shuffle")
+
+                // Repeat button
+                Button(action: {
+                    cycleRepeatMode()
+                }) {
+                    Image(systemName: repeatModeIcon)
+                        .foregroundColor(repeatMode != "off" ? .green : .white.opacity(0.7))
+                }
+                .help("Repeat: \(repeatMode)")
+
+                // Clear queue button
+                Button(action: {
+                    showClearConfirmation = true
+                }) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .help("Clear Queue")
+                .disabled(viewModel.tracks.isEmpty)
+            }
+        }
+        .alert("Clear Queue", isPresented: $showClearConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear", role: .destructive) {
+                Task {
+                    try? await viewModel.clearQueue()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to clear all tracks from the queue?")
+        }
+    }
+
+    private var repeatModeIcon: String {
+        switch repeatMode {
+        case "all":
+            return "repeat.circle.fill"
+        case "one":
+            return "repeat.1.circle.fill"
+        default:
+            return "repeat"
+        }
+    }
+
+    private func cycleRepeatMode() {
+        switch repeatMode {
+        case "off":
+            repeatMode = "all"
+        case "all":
+            repeatMode = "one"
+        case "one":
+            repeatMode = "off"
+        default:
+            repeatMode = "off"
+        }
+
+        Task {
+            try? await viewModel.setRepeat(mode: repeatMode)
+        }
     }
 
     private var emptyState: some View {
