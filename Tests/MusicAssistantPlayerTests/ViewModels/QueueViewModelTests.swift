@@ -108,4 +108,76 @@ final class QueueViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.trackCount, 2)
         XCTAssertEqual(viewModel.totalDuration, "6:20")
     }
+
+    @MainActor
+    func testShuffleStateBindsToPlayerService() {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Initially false
+        XCTAssertFalse(viewModel.isShuffled)
+
+        // Update PlayerService state
+        playerService.isShuffled = true
+
+        // Should propagate to ViewModel
+        XCTAssertTrue(viewModel.isShuffled)
+    }
+
+    @MainActor
+    func testRepeatModeBindsToPlayerService() {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Initially "off"
+        XCTAssertEqual(viewModel.repeatMode, "off")
+
+        // Update PlayerService state
+        playerService.repeatMode = "all"
+
+        // Should propagate to ViewModel
+        XCTAssertEqual(viewModel.repeatMode, "all")
+
+        playerService.repeatMode = "one"
+        XCTAssertEqual(viewModel.repeatMode, "one")
+    }
+
+    @MainActor
+    func testToggleShuffleCallsPlayerService() async {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Initially false
+        XCTAssertFalse(viewModel.isShuffled)
+
+        // Toggle shuffle (will fail due to no client, but method is called)
+        await viewModel.toggleShuffle()
+
+        // PlayerService rollback happens when there's no client
+        // The important thing is the method was called
+        // In real usage with a client, the state would persist
+        XCTAssertFalse(playerService.isShuffled) // Rolled back due to no client
+        XCTAssertNotNil(playerService.lastError) // Error was set
+    }
+
+    @MainActor
+    func testCycleRepeatModeCallsPlayerService() async {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Initially "off"
+        XCTAssertEqual(viewModel.repeatMode, "off")
+
+        // Cycle: off -> all (will rollback due to no client)
+        await viewModel.cycleRepeatMode()
+        // Rolled back due to no client
+        XCTAssertEqual(playerService.repeatMode, "off")
+        XCTAssertNotNil(playerService.lastError)
+
+        // The method itself works correctly - rollback is expected behavior when client is nil
+    }
 }

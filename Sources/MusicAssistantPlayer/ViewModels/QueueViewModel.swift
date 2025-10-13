@@ -7,20 +7,31 @@ import Combine
 @MainActor
 class QueueViewModel: ObservableObject {
     private let queueService: QueueService
+    private let playerService: PlayerService?
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var tracks: [Track] = []
     @Published var errorMessage: String?
     @Published var isLoading = false
+    @Published var isShuffled: Bool = false
+    @Published var repeatMode: String = "off" // "off", "all", "one"
 
-    init(queueService: QueueService) {
+    init(queueService: QueueService, playerService: PlayerService? = nil) {
         self.queueService = queueService
+        self.playerService = playerService
         setupBindings()
     }
 
     private func setupBindings() {
         queueService.$upcomingTracks
             .assign(to: &$tracks)
+
+        // Bind shuffle/repeat state from PlayerService
+        playerService?.$isShuffled
+            .assign(to: &$isShuffled)
+
+        playerService?.$repeatMode
+            .assign(to: &$repeatMode)
     }
 
     // MARK: - Queue Operations
@@ -62,6 +73,23 @@ class QueueViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             throw error
         }
+    }
+
+    func toggleShuffle() async {
+        guard let playerService = playerService else { return }
+        await playerService.setShuffle(enabled: !isShuffled)
+    }
+
+    func cycleRepeatMode() async {
+        guard let playerService = playerService else { return }
+        let nextMode: String
+        switch repeatMode {
+        case "off": nextMode = "all"
+        case "all": nextMode = "one"
+        case "one": nextMode = "off"
+        default: nextMode = "off"
+        }
+        await playerService.setRepeat(mode: nextMode)
     }
 
     // MARK: - Statistics
