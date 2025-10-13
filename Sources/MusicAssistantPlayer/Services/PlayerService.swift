@@ -241,7 +241,8 @@ class PlayerService: ObservableObject {
                 throw PlayerError.playerNotFound("No player selected")
             }
             AppLogger.player.debug("Seeking to position: \(position) on player: \(player.name)")
-            try await client.seek(playerId: player.id, position: position)
+            // Use queue-level seek (queueId is same as playerId in Music Assistant)
+            try await client.seek(queueId: player.id, position: position)
             lastError = nil
         } catch let error as PlayerError {
             AppLogger.errors.logPlayerError(error, context: "seek(to: \(position))")
