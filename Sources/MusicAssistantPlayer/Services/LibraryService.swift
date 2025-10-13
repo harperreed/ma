@@ -965,6 +965,358 @@ class LibraryService: ObservableObject {
         }
     }
 
+    // MARK: - Task 11: Favorites Methods
+
+    func fetchFavoriteArtists(
+        limit: Int? = nil,
+        offset: Int? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
+        do {
+            AppLogger.network.info("Fetching favorite artists: limit=\(fetchLimit), offset=\(fetchOffset)")
+
+            let result = try await client.sendCommand(
+                command: "music/artists/library_items",
+                args: [
+                    "favorite": true,
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
+
+            if let result = result {
+                let parsedArtists = parseArtists(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    self.artists = parsedArtists
+                } else {
+                    self.artists.append(contentsOf: parsedArtists)
+                }
+
+                self.currentOffset = fetchOffset + parsedArtists.count
+                self.hasMoreItems = parsedArtists.count == fetchLimit
+                lastError = nil
+            } else {
+                self.artists = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchFavoriteArtists")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchFavoriteArtists")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    func fetchFavoriteAlbums(
+        limit: Int? = nil,
+        offset: Int? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
+        do {
+            AppLogger.network.info("Fetching favorite albums: limit=\(fetchLimit), offset=\(fetchOffset)")
+
+            let result = try await client.sendCommand(
+                command: "music/albums/library_items",
+                args: [
+                    "favorite": true,
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
+
+            if let result = result {
+                let parsedAlbums = parseAlbums(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    self.albums = parsedAlbums
+                } else {
+                    self.albums.append(contentsOf: parsedAlbums)
+                }
+
+                self.currentOffset = fetchOffset + parsedAlbums.count
+                self.hasMoreItems = parsedAlbums.count == fetchLimit
+                lastError = nil
+            } else {
+                self.albums = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchFavoriteAlbums")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchFavoriteAlbums")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    func fetchFavoriteTracks(
+        limit: Int? = nil,
+        offset: Int? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
+        do {
+            AppLogger.network.info("Fetching favorite tracks: limit=\(fetchLimit), offset=\(fetchOffset)")
+
+            let result = try await client.sendCommand(
+                command: "music/tracks/library_items",
+                args: [
+                    "favorite": true,
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
+
+            if let result = result {
+                let parsedTracks = parseTracks(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    self.tracks = parsedTracks
+                } else {
+                    self.tracks.append(contentsOf: parsedTracks)
+                }
+
+                self.currentOffset = fetchOffset + parsedTracks.count
+                self.hasMoreItems = parsedTracks.count == fetchLimit
+                lastError = nil
+            } else {
+                self.tracks = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchFavoriteTracks")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchFavoriteTracks")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    func fetchFavoritePlaylists(
+        limit: Int? = nil,
+        offset: Int? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
+        do {
+            AppLogger.network.info("Fetching favorite playlists: limit=\(fetchLimit), offset=\(fetchOffset)")
+
+            let result = try await client.sendCommand(
+                command: "music/playlists/library_items",
+                args: [
+                    "favorite": true,
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
+
+            if let result = result {
+                let parsedPlaylists = parsePlaylists(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    self.playlists = parsedPlaylists
+                } else {
+                    self.playlists.append(contentsOf: parsedPlaylists)
+                }
+
+                self.currentOffset = fetchOffset + parsedPlaylists.count
+                self.hasMoreItems = parsedPlaylists.count == fetchLimit
+                lastError = nil
+            } else {
+                self.playlists = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchFavoritePlaylists")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchFavoritePlaylists")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    // MARK: - Task 11: Recently Played Methods
+
+    func fetchRecentlyPlayed(
+        limit: Int? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? 20 // Smaller limit for recently played
+
+        do {
+            AppLogger.network.info("Fetching recently played items: limit=\(fetchLimit)")
+
+            // Music Assistant API: Fetch recently played tracks sorted by timestamp
+            let result = try await client.sendCommand(
+                command: "music/tracks/library_items",
+                args: [
+                    "order_by": "timestamp_played",
+                    "limit": fetchLimit
+                ]
+            )
+
+            if let result = result {
+                self.tracks = parseTracks(from: result)
+                lastError = nil
+            } else {
+                self.tracks = []
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchRecentlyPlayed")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchRecentlyPlayed")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    // MARK: - Task 11: Add/Remove Favorites Methods
+
+    func addToFavorites(itemId: String, mediaType: String) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        do {
+            AppLogger.network.info("Adding item \(itemId) to favorites (type: \(mediaType))")
+
+            // Music Assistant API: Set favorite flag to true
+            try await client.sendCommand(
+                command: "music/\(mediaType)s/favorite",
+                args: [
+                    "item_id": itemId,
+                    "favorite": true
+                ]
+            )
+
+            // Invalidate cache to ensure fresh data on next fetch
+            invalidateCache(for: categoryFromMediaType(mediaType))
+            lastError = nil
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "addToFavorites")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "addToFavorites")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    func removeFromFavorites(itemId: String, mediaType: String) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        do {
+            AppLogger.network.info("Removing item \(itemId) from favorites (type: \(mediaType))")
+
+            // Music Assistant API: Set favorite flag to false
+            try await client.sendCommand(
+                command: "music/\(mediaType)s/favorite",
+                args: [
+                    "item_id": itemId,
+                    "favorite": false
+                ]
+            )
+
+            // Invalidate cache to ensure fresh data on next fetch
+            invalidateCache(for: categoryFromMediaType(mediaType))
+            lastError = nil
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "removeFromFavorites")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "removeFromFavorites")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    // Helper to convert media type string to LibraryCategory for cache invalidation
+    private func categoryFromMediaType(_ mediaType: String) -> LibraryCategory {
+        switch mediaType {
+        case "artist":
+            return .artists
+        case "album":
+            return .albums
+        case "track":
+            return .tracks
+        case "playlist":
+            return .playlists
+        case "radio":
+            return .radio
+        case "genre":
+            return .genres
+        default:
+            return .tracks // Default fallback
+        }
+    }
+
     // Methods to be added in subsequent tasks:
     // - playNow(item:on:)
     // - addToQueue(item:for:)

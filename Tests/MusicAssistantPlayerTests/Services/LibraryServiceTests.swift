@@ -315,4 +315,142 @@ final class LibraryServiceTests: XCTestCase {
             XCTAssertTrue(error is LibraryError)
         }
     }
+
+    // MARK: - Task 11: Favorites Tests
+
+    @MainActor
+    func testFetchFavoriteArtistsWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteArtists()
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteAlbumsWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteAlbums()
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoriteTracksWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoriteTracks()
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testFetchFavoritePlaylistsWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchFavoritePlaylists()
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    // MARK: - Task 11: Recently Played Tests
+
+    @MainActor
+    func testFetchRecentlyPlayedWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchRecentlyPlayed()
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testFetchRecentlyPlayedWithLimit() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.fetchRecentlyPlayed(limit: 10)
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    // MARK: - Task 11: Add/Remove Favorites Tests
+
+    @MainActor
+    func testAddToFavoritesWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.addToFavorites(itemId: "test-id", mediaType: "track")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testRemoveFromFavoritesWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.removeFromFavorites(itemId: "test-id", mediaType: "track")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+            XCTAssertNotNil(service.lastError)
+        }
+    }
+
+    @MainActor
+    func testAddToFavoritesForDifferentMediaTypes() async {
+        let service = LibraryService(client: nil)
+
+        // Test for artist
+        do {
+            try await service.addToFavorites(itemId: "artist-1", mediaType: "artist")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+
+        // Test for album
+        do {
+            try await service.addToFavorites(itemId: "album-1", mediaType: "album")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+
+        // Test for playlist
+        do {
+            try await service.addToFavorites(itemId: "playlist-1", mediaType: "playlist")
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
 }
