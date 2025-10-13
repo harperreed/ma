@@ -106,4 +106,38 @@ final class QueueServiceTests: XCTestCase {
             XCTFail("Wrong error type: \(error)")
         }
     }
+
+    @MainActor
+    func testTotalDuration() {
+        let service = QueueService()
+        service.upcomingTracks = [
+            Track(id: "1", title: "Track 1", artist: "Artist", album: "Album", duration: 180, artworkURL: nil),
+            Track(id: "2", title: "Track 2", artist: "Artist", album: "Album", duration: 200, artworkURL: nil),
+            Track(id: "3", title: "Track 3", artist: "Artist", album: "Album", duration: 120, artworkURL: nil)
+        ]
+
+        XCTAssertEqual(service.totalDuration, 500)
+    }
+
+    @MainActor
+    func testFormattedTotalDuration() {
+        let service = QueueService()
+        service.upcomingTracks = [
+            Track(id: "1", title: "Track 1", artist: "Artist", album: "Album", duration: 180, artworkURL: nil),
+            Track(id: "2", title: "Track 2", artist: "Artist", album: "Album", duration: 3600, artworkURL: nil)
+        ]
+
+        XCTAssertEqual(service.formattedTotalDuration, "1:03:00")
+    }
+
+    @MainActor
+    func testTrackCount() {
+        let service = QueueService()
+        service.upcomingTracks = [
+            Track(id: "1", title: "Track 1", artist: "Artist", album: "Album", duration: 180, artworkURL: nil),
+            Track(id: "2", title: "Track 2", artist: "Artist", album: "Album", duration: 200, artworkURL: nil)
+        ]
+
+        XCTAssertEqual(service.trackCount, 2)
+    }
 }
