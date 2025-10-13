@@ -6,12 +6,61 @@ import SwiftUI
 struct LibrarySidebarView: View {
     @Binding var selectedCategory: LibraryCategory?
     let providers: [String] // Provider names from Music Assistant
+    let currentTrackTitle: String?
+    let currentArtist: String?
+    let onNowPlayingTap: () -> Void
 
     @State private var isLibraryExpanded = true
     @State private var isProvidersExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Now Playing Button
+            Button(action: onNowPlayingTap) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 16))
+                        Text("NOW PLAYING")
+                            .font(.system(size: 11, weight: .semibold))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundColor(.white.opacity(0.5))
+
+                    if let title = currentTrackTitle {
+                        Text(title)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        if let artist = currentArtist {
+                            Text(artist)
+                                .font(.system(size: 11))
+                                .foregroundColor(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                    } else {
+                        Text("No track playing")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            Divider()
+                .background(Color.white.opacity(0.1))
+                .padding(.vertical, 8)
+
             // Library Section
             DisclosureGroup(
                 isExpanded: $isLibraryExpanded,
@@ -128,7 +177,10 @@ struct ProviderButton: View {
 #Preview {
     LibrarySidebarView(
         selectedCategory: .constant(.artists),
-        providers: ["Spotify", "Tidal", "Local Files"]
+        providers: ["Spotify", "Tidal", "Local Files"],
+        currentTrackTitle: "Song Title",
+        currentArtist: "Artist Name",
+        onNowPlayingTap: {}
     )
     .frame(width: 200, height: 600)
 }

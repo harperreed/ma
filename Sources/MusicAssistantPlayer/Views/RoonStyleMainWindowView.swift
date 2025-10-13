@@ -70,7 +70,14 @@ struct RoonStyleMainWindowView: View {
                     if isLibrarySidebarVisible && shouldShowSidebar(for: geometry.size) {
                         LibrarySidebarView(
                             selectedCategory: $selectedLibraryCategory,
-                            providers: libraryService.providers
+                            providers: libraryService.providers,
+                            currentTrackTitle: nowPlayingViewModel.currentTrack?.title,
+                            currentArtist: nowPlayingViewModel.currentTrack?.artist,
+                            onNowPlayingTap: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    centerViewMode = .expandedNowPlaying
+                                }
+                            }
                         )
                         .frame(width: LayoutConstants.sidebarWidth)
                         .onChange(of: selectedLibraryCategory) { _, newCategory in
@@ -91,15 +98,48 @@ struct RoonStyleMainWindowView: View {
                     centerView
                         .frame(maxWidth: .infinity)
 
-                    // Right: Queue View
+                    // Right: Players and Queue Panel
                     if shouldShowQueue(for: geometry.size) {
                         Divider()
                             .background(Color.white.opacity(0.1))
 
-                        QueueView(
-                            viewModel: queueViewModel,
-                            currentTrack: nowPlayingViewModel.currentTrack
-                        )
+                        VStack(spacing: 12) {
+                            // Players Card
+                            PlayersCard(
+                                players: availablePlayers,
+                                selectedPlayer: $selectedPlayer,
+                                onPlayerSelection: handlePlayerSelection
+                            )
+                            .frame(maxHeight: 300)
+
+                            // Queue Card
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack {
+                                    Text("QUEUE")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.5))
+
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+
+                                Divider()
+                                    .background(Color.white.opacity(0.1))
+
+                                QueueView(
+                                    viewModel: queueViewModel,
+                                    currentTrack: nowPlayingViewModel.currentTrack
+                                )
+                            }
+                            .background(Color.white.opacity(0.03))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                        }
+                        .padding(12)
                         .frame(width: LayoutConstants.queueWidth)
                     }
                 }
