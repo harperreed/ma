@@ -91,8 +91,10 @@ struct MainWindowView: View {
             return 180  // Narrower on small screens
         } else if size.width < 1000 {
             return 200
+        } else if size.width < 1200 {
+            return 280  // Match queue width for centering
         } else {
-            return 220  // Full width on larger screens
+            return 300  // Match queue width for centering
         }
     }
 
@@ -100,9 +102,9 @@ struct MainWindowView: View {
         if size.width < 1000 {
             return 280  // Narrower on small screens
         } else if size.width < 1200 {
-            return 320
+            return 280  // Match sidebar width for centering
         } else {
-            return 350  // Full width on larger screens
+            return 300  // Match sidebar width for centering
         }
     }
 
