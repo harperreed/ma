@@ -357,4 +357,15 @@ final class PlayerServiceTests: XCTestCase {
 
         XCTAssertNotNil(service.lastError)
     }
+
+    // MARK: - Favorite Tests
+
+    @MainActor
+    func testToggleFavoritePublishesError() async {
+        let service = PlayerService(client: nil)
+
+        await service.toggleFavorite(trackId: "test-track-id")
+
+        XCTAssertNotNil(service.lastError)
+    }
 }

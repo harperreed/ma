@@ -21,6 +21,7 @@ class PlayerService: ObservableObject {
     @Published var lastError: PlayerError?
     @Published var isShuffled: Bool = false
     @Published var repeatMode: String = "off" // "off", "all", "one"
+    @Published var isFavorite: Bool = false
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
@@ -490,6 +491,70 @@ class PlayerService: ObservableObject {
             AppLogger.errors.logError(error, context: "setRepeat(\(mode))")
             lastError = .commandFailed("setRepeat", reason: error.localizedDescription)
             self.repeatMode = mode == "off" ? "all" : "off"
+        }
+    }
+
+    func toggleFavorite(trackId: String) async {
+        // Optimistically toggle for immediate UI feedback
+        self.isFavorite.toggle()
+        let newState = self.isFavorite
+
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+
+            AppLogger.player.info("Toggling favorite for track: \(trackId) to: \(newState)")
+
+            // Music Assistant API: music/tracks/favorite
+            try await client.sendCommand(
+                command: "music/tracks/favorite",
+                args: [
+                    "item_id": trackId,
+                    "favorite": newState
+                ]
+            )
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "toggleFavorite(\(trackId))")
+            lastError = error
+            // Rollback on failure
+            self.isFavorite = !newState
+        } catch {
+            AppLogger.errors.logError(error, context: "toggleFavorite(\(trackId))")
+            lastError = .commandFailed("toggleFavorite", reason: error.localizedDescription)
+            self.isFavorite = !newState
+        }
+    }
+
+    func checkIfFavorite(trackId: String) async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+
+            // Music Assistant API: music/tracks/get
+            let result = try await client.sendCommand(
+                command: "music/tracks/get",
+                args: ["item_id": trackId]
+            )
+
+            // Parse favorite status from result
+            if let result = result,
+               let trackData = result.value as? [String: Any],
+               let favorite = trackData["favorite"] as? Bool {
+                self.isFavorite = favorite
+            } else {
+                self.isFavorite = false
+            }
+
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "checkIfFavorite(\(trackId))")
+            lastError = error
+        } catch {
+            AppLogger.errors.logError(error, context: "checkIfFavorite(\(trackId))")
+            lastError = .commandFailed("checkIfFavorite", reason: error.localizedDescription)
         }
     }
 }
