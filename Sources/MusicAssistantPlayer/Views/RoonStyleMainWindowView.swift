@@ -245,6 +245,9 @@ struct RoonStyleMainWindowView: View {
     private func initializeServices() async {
         await fetchInitialData()
         subscribeToPlayerUpdates()
+
+        // Load initial library content (default category is artists)
+        await libraryViewModel.loadContent()
     }
 
     private func fetchInitialData() async {

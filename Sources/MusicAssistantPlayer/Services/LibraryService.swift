@@ -10,6 +10,7 @@ class LibraryService: ObservableObject {
     @Published var artists: [Artist] = []
     @Published var albums: [Album] = []
     @Published var playlists: [Playlist] = []
+    @Published var tracks: [Track] = []
     @Published var error: String?
 
     private(set) var client: MusicAssistantClient?
@@ -222,8 +223,99 @@ class LibraryService: ObservableObject {
         }
     }
 
+    // MARK: - Fetch Tracks
+
+    func fetchTracks(for albumId: String? = nil) async throws {
+        guard let client = client else {
+            self.error = "No client available"
+            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+        }
+
+        do {
+            // Music Assistant API: music/tracks/library_items
+            let result: AnyCodable?
+            if let albumId = albumId {
+                // Fetch tracks for specific album
+                result = try await client.sendCommand(
+                    command: "music/tracks/library_items",
+                    args: ["album": albumId]
+                )
+            } else {
+                // Fetch all tracks
+                result = try await client.sendCommand(command: "music/tracks/library_items")
+            }
+
+            if let result = result {
+                let parsedTracks = parseTracks(from: result)
+                self.tracks = parsedTracks
+                self.error = nil
+            } else {
+                self.tracks = []
+                self.error = nil
+            }
+        } catch {
+            self.error = "Failed to fetch tracks: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
+    private func parseTracks(from data: AnyCodable) -> [Track] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            guard let id = item["item_id"] as? String,
+                  let title = item["name"] as? String
+            else {
+                return nil
+            }
+
+            // Extract artist name
+            let artist: String
+            if let artistName = item["artist"] as? String {
+                artist = artistName
+            } else if let artists = item["artists"] as? [[String: Any]],
+                      let firstArtist = artists.first,
+                      let artistName = firstArtist["name"] as? String {
+                artist = artistName
+            } else {
+                artist = "Unknown Artist"
+            }
+
+            // Extract album name
+            let album: String
+            if let albumDict = item["album"] as? [String: Any],
+               let albumName = albumDict["name"] as? String {
+                album = albumName
+            } else if let albumName = item["album"] as? String {
+                album = albumName
+            } else {
+                album = "Unknown Album"
+            }
+
+            let artworkURL: URL?
+            if let metadata = item["metadata"] as? [String: Any],
+               let imageURLString = metadata["image"] as? String {
+                artworkURL = URL(string: imageURLString)
+            } else {
+                artworkURL = nil
+            }
+
+            let duration = item["duration"] as? Double ?? 0.0
+
+            return Track(
+                id: id,
+                title: title,
+                artist: artist,
+                album: album,
+                duration: duration,
+                artworkURL: artworkURL
+            )
+        }
+    }
+
     // Methods to be added in subsequent tasks:
-    // - fetchTracks(for albumId: String)
     // - playNow(item:on:)
     // - addToQueue(item:for:)
 }
