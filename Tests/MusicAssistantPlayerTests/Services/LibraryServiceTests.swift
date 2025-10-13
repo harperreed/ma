@@ -11,7 +11,7 @@ final class LibraryServiceTests: XCTestCase {
         XCTAssertTrue(libraryService.artists.isEmpty)
         XCTAssertTrue(libraryService.albums.isEmpty)
         XCTAssertTrue(libraryService.playlists.isEmpty)
-        XCTAssertNil(libraryService.error)
+        XCTAssertNil(libraryService.lastError)
     }
 
     @MainActor
@@ -32,7 +32,7 @@ final class LibraryServiceTests: XCTestCase {
             try await libraryService.fetchArtists()
             XCTFail("Expected error to be thrown")
         } catch {
-            XCTAssertNotNil(libraryService.error)
+            XCTAssertNotNil(libraryService.lastError)
             XCTAssertTrue(libraryService.artists.isEmpty)
         }
     }
@@ -61,7 +61,7 @@ final class LibraryServiceTests: XCTestCase {
             try await libraryService.fetchAlbums(for: nil)
             XCTFail("Expected error to be thrown")
         } catch {
-            XCTAssertNotNil(libraryService.error)
+            XCTAssertNotNil(libraryService.lastError)
             XCTAssertTrue(libraryService.albums.isEmpty)
         }
     }
@@ -94,7 +94,7 @@ final class LibraryServiceTests: XCTestCase {
             try await libraryService.fetchPlaylists()
             XCTFail("Expected error to be thrown")
         } catch {
-            XCTAssertNotNil(libraryService.error)
+            XCTAssertNotNil(libraryService.lastError)
             XCTAssertTrue(libraryService.playlists.isEmpty)
         }
     }
@@ -106,5 +106,19 @@ final class LibraryServiceTests: XCTestCase {
 
         // For now, just verify the method exists
         XCTAssertTrue(libraryService.playlists.isEmpty)
+    }
+
+    // MARK: - Task 6: search Tests
+
+    @MainActor
+    func testSearchPublishesError() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            try await service.search(query: "test", in: .artists)
+            XCTFail("Should throw error")
+        } catch {
+            XCTAssertTrue(error is LibraryError)
+        }
     }
 }

@@ -34,4 +34,21 @@ enum LibraryCategory: String, CaseIterable, Identifiable {
         case .genres: return "guitars"
         }
     }
+
+    var apiMediaType: String {
+        switch self {
+        case .artists:
+            return "artist"
+        case .albums:
+            return "album"
+        case .tracks:
+            return "track"
+        case .playlists:
+            return "playlist"
+        case .radio:
+            return "radio"
+        case .genres:
+            return "genre"
+        }
+    }
 }

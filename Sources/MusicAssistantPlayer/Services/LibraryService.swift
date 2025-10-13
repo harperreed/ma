@@ -4,6 +4,7 @@
 import Foundation
 import MusicAssistantKit
 import Combine
+import os.log
 
 @MainActor
 class LibraryService: ObservableObject {
@@ -12,7 +13,7 @@ class LibraryService: ObservableObject {
     @Published var playlists: [Playlist] = []
     @Published var tracks: [Track] = []
     @Published var providers: [String] = []
-    @Published var error: String?
+    @Published var lastError: LibraryError?
 
     private(set) var client: MusicAssistantClient?
 
@@ -24,8 +25,9 @@ class LibraryService: ObservableObject {
 
     func fetchArtists() async throws {
         guard let client = client else {
-            self.error = "No client available"
-            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
         }
 
         do {
@@ -35,14 +37,18 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let parsedArtists = parseArtists(from: result)
                 self.artists = parsedArtists
-                self.error = nil
+                self.lastError = nil
             } else {
                 self.artists = []
-                self.error = nil
+                self.lastError = nil
             }
-        } catch {
-            self.error = "Failed to fetch artists: \(error.localizedDescription)"
+        } catch let error as LibraryError {
+            lastError = error
             throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            lastError = libError
+            throw libError
         }
     }
 
@@ -82,8 +88,9 @@ class LibraryService: ObservableObject {
 
     func fetchAlbums(for artistId: String? = nil) async throws {
         guard let client = client else {
-            self.error = "No client available"
-            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
         }
 
         do {
@@ -104,14 +111,18 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let parsedAlbums = parseAlbums(from: result)
                 self.albums = parsedAlbums
-                self.error = nil
+                self.lastError = nil
             } else {
                 self.albums = []
-                self.error = nil
+                self.lastError = nil
             }
-        } catch {
-            self.error = "Failed to fetch albums: \(error.localizedDescription)"
+        } catch let error as LibraryError {
+            lastError = error
             throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            lastError = libError
+            throw libError
         }
     }
 
@@ -167,8 +178,9 @@ class LibraryService: ObservableObject {
 
     func fetchPlaylists() async throws {
         guard let client = client else {
-            self.error = "No client available"
-            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
         }
 
         do {
@@ -178,14 +190,18 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let parsedPlaylists = parsePlaylists(from: result)
                 self.playlists = parsedPlaylists
-                self.error = nil
+                self.lastError = nil
             } else {
                 self.playlists = []
-                self.error = nil
+                self.lastError = nil
             }
-        } catch {
-            self.error = "Failed to fetch playlists: \(error.localizedDescription)"
+        } catch let error as LibraryError {
+            lastError = error
             throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            lastError = libError
+            throw libError
         }
     }
 
@@ -228,8 +244,9 @@ class LibraryService: ObservableObject {
 
     func fetchTracks(for albumId: String? = nil) async throws {
         guard let client = client else {
-            self.error = "No client available"
-            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
         }
 
         do {
@@ -249,14 +266,18 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let parsedTracks = parseTracks(from: result)
                 self.tracks = parsedTracks
-                self.error = nil
+                self.lastError = nil
             } else {
                 self.tracks = []
-                self.error = nil
+                self.lastError = nil
             }
-        } catch {
-            self.error = "Failed to fetch tracks: \(error.localizedDescription)"
+        } catch let error as LibraryError {
+            lastError = error
             throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            lastError = libError
+            throw libError
         }
     }
 
@@ -320,8 +341,9 @@ class LibraryService: ObservableObject {
 
     func fetchProviders() async throws {
         guard let client = client else {
-            self.error = "No client available"
-            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
         }
 
         do {
@@ -331,14 +353,18 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let providerNames = parseProviders(from: result)
                 self.providers = providerNames
-                self.error = nil
+                self.lastError = nil
             } else {
                 self.providers = []
-                self.error = nil
+                self.lastError = nil
             }
-        } catch {
-            self.error = "Failed to fetch providers: \(error.localizedDescription)"
+        } catch let error as LibraryError {
+            lastError = error
             throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            lastError = libError
+            throw libError
         }
     }
 
@@ -357,6 +383,76 @@ class LibraryService: ObservableObject {
                 return instanceId
             }
             return nil
+        }
+    }
+
+    // MARK: - Search
+
+    func search(query: String, in category: LibraryCategory) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        guard !query.isEmpty else {
+            // Empty query - just fetch all for category
+            switch category {
+            case .artists:
+                try await fetchArtists()
+            case .albums:
+                try await fetchAlbums(for: nil)
+            case .tracks:
+                try await fetchTracks(for: nil)
+            case .playlists:
+                try await fetchPlaylists()
+            case .radio, .genres:
+                let error = LibraryError.categoryNotImplemented(category)
+                lastError = error
+                throw error
+            }
+            return
+        }
+
+        do {
+            AppLogger.network.info("Searching \(category.displayName) for: \(query)")
+
+            // Music Assistant API: music/search
+            let result = try await client.sendCommand(
+                command: "music/search",
+                args: [
+                    "query": query,
+                    "media_type": category.apiMediaType
+                ]
+            )
+
+            if let result = result {
+                // Parse results based on category
+                switch category {
+                case .artists:
+                    self.artists = parseArtists(from: result)
+                case .albums:
+                    self.albums = parseAlbums(from: result)
+                case .tracks:
+                    self.tracks = parseTracks(from: result)
+                case .playlists:
+                    self.playlists = parsePlaylists(from: result)
+                case .radio, .genres:
+                    let error = LibraryError.categoryNotImplemented(category)
+                    lastError = error
+                    throw error
+                }
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "search")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.searchFailed(query)
+            AppLogger.errors.logError(error, context: "search")
+            lastError = libError
+            throw libError
         }
     }
 

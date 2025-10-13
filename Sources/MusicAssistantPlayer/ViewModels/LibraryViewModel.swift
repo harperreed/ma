@@ -34,7 +34,7 @@ class LibraryViewModel: ObservableObject {
     }
 
     var errorMessage: String? {
-        libraryService.error
+        libraryService.lastError?.localizedDescription
     }
 
     // Methods to load content based on category
