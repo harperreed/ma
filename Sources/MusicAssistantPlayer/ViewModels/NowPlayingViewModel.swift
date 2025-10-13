@@ -44,6 +44,8 @@ class NowPlayingViewModel: ObservableObject {
                 // Check if new track is favorited
                 if let trackId = track?.id {
                     Task { [weak self] in
+                        // Verify track hasn't changed before updating state
+                        guard self?.currentTrack?.id == trackId else { return }
                         await self?.playerService.checkIfFavorite(trackId: trackId)
                     }
                 }
