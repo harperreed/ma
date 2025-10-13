@@ -1,5 +1,5 @@
 // ABOUTME: Utility for parsing Music Assistant event data into app models
-// ABOUTME: Handles extraction of track metadata, playback state, and progress from event dictionaries
+// ABOUTME: Handles extraction of track metadata, playback state, progress, and volume from event dictionaries
 
 import Foundation
 import MusicAssistantKit
@@ -78,6 +78,21 @@ enum EventParser {
         }
 
         return 0.0
+    }
+
+    static func parseVolume(from data: [String: AnyCodable]) -> Double {
+        guard let volumeWrapper = data["volume_level"] else {
+            return 50.0 // Default to 50% if not present
+        }
+
+        // volume_level can be Int or Double
+        if let volumeInt = volumeWrapper.value as? Int {
+            return Double(volumeInt)
+        } else if let volumeDouble = volumeWrapper.value as? Double {
+            return volumeDouble
+        }
+
+        return 50.0
     }
 
     static func parseQueueItems(from data: [String: AnyCodable]) -> [Track] {

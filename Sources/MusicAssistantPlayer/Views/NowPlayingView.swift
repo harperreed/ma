@@ -103,6 +103,7 @@ struct NowPlayingView: View {
                         onSkipPrevious: viewModel.skipPrevious,
                         onSkipNext: viewModel.skipNext,
                         onSeek: viewModel.seek,
+                        onVolumeChange: viewModel.setVolume,
                         onShuffle: viewModel.toggleShuffle,
                         onLike: viewModel.toggleLike,
                         onRepeat: viewModel.cycleRepeatMode

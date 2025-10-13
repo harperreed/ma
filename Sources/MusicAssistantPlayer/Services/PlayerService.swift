@@ -9,8 +9,13 @@ import os.log
 @MainActor
 class PlayerService: ObservableObject {
     @Published var currentTrack: Track?
-    @Published var playbackState: PlaybackState = .stopped
+    @Published var playbackState: PlaybackState = .stopped {
+        didSet {
+            handlePlaybackStateChange(oldValue: oldValue, newValue: playbackState)
+        }
+    }
     @Published var progress: TimeInterval = 0.0
+    @Published var volume: Double = 50.0
     @Published var selectedPlayer: Player?
     @Published var connectionState: ConnectionState = .disconnected
     @Published var lastError: PlayerError?
@@ -19,6 +24,8 @@ class PlayerService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     internal var eventTask: Task<Void, Never>?
     private var connectionMonitorTask: Task<Void, Never>?
+    private var progressTask: Task<Void, Never>?
+    private var lastProgressUpdate = Date()
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -29,6 +36,45 @@ class PlayerService: ObservableObject {
     deinit {
         eventTask?.cancel()
         connectionMonitorTask?.cancel()
+        progressTask?.cancel()
+    }
+
+    private func handlePlaybackStateChange(oldValue: PlaybackState, newValue: PlaybackState) {
+        if newValue == .playing {
+            startLocalProgressTracking()
+        } else {
+            stopLocalProgressTracking()
+        }
+    }
+
+    private func startLocalProgressTracking() {
+        stopLocalProgressTracking()
+
+        progressTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(100)) // Update every 100ms
+
+                await MainActor.run { [weak self] in
+                    guard let self = self,
+                          self.playbackState == .playing,
+                          let duration = self.currentTrack?.duration,
+                          self.progress < duration else {
+                        return
+                    }
+
+                    // Increment progress by elapsed time
+                    let now = Date()
+                    let elapsed = now.timeIntervalSince(self.lastProgressUpdate)
+                    self.progress += elapsed
+                    self.lastProgressUpdate = now
+                }
+            }
+        }
+    }
+
+    private func stopLocalProgressTracking() {
+        progressTask?.cancel()
+        progressTask = nil
     }
 
     private func monitorConnection() {
@@ -65,25 +111,56 @@ class PlayerService: ObservableObject {
             guard let client = self?.client else { return }
 
             for await event in await client.events.playerUpdates.values {
-                guard let self = self else { return }
+                guard let self = self else {
+                    AppLogger.player.warning("PlayerService deallocated, stopping event subscription")
+                    return
+                }
 
                 await MainActor.run { [weak self] in
-                    guard let self = self,
-                          let selectedPlayer = self.selectedPlayer,
-                          event.playerId == selectedPlayer.id else {
+                    guard let self = self else { return }
+
+                    // Log ALL received events for debugging
+                    AppLogger.player.debug("Received player event for player: \(event.playerId)")
+
+                    // If no player selected yet, log and skip (but don't lose the event loop)
+                    guard let selectedPlayer = self.selectedPlayer else {
+                        AppLogger.player.debug("No player selected, skipping event for: \(event.playerId)")
                         return
                     }
+
+                    // If event is for different player, log and skip
+                    guard event.playerId == selectedPlayer.id else {
+                        AppLogger.player.debug("Event for different player (received: \(event.playerId), selected: \(selectedPlayer.id)), skipping")
+                        return
+                    }
+
+                    AppLogger.player.debug("Processing event for selected player: \(selectedPlayer.name)")
 
                     // Parse track
                     if let track = EventParser.parseTrack(from: event.data) {
                         self.currentTrack = track
+                        AppLogger.player.debug("Updated track: \(track.title)")
                     }
 
                     // Parse playback state
-                    self.playbackState = EventParser.parsePlaybackState(from: event.data)
+                    let newState = EventParser.parsePlaybackState(from: event.data)
+                    if newState != self.playbackState {
+                        AppLogger.player.debug("Playback state changed: \(self.playbackState) -> \(newState)")
+                        self.playbackState = newState
+                    }
 
-                    // Parse progress
-                    self.progress = EventParser.parseProgress(from: event.data)
+                    // Parse progress and update timestamp
+                    let newProgress = EventParser.parseProgress(from: event.data)
+                    AppLogger.player.debug("Progress update: \(newProgress)s")
+                    self.progress = newProgress
+                    self.lastProgressUpdate = Date()
+
+                    // Parse volume
+                    let newVolume = EventParser.parseVolume(from: event.data)
+                    if newVolume != self.volume {
+                        AppLogger.player.debug("Volume update: \(newVolume)")
+                        self.volume = newVolume
+                    }
                 }
             }
         }
@@ -124,8 +201,12 @@ class PlayerService: ObservableObject {
                 // Parse playback state
                 playbackState = EventParser.parsePlaybackState(from: anyCodableData)
 
-                // Parse progress
+                // Parse progress and update timestamp for local tracking sync
                 progress = EventParser.parseProgress(from: anyCodableData)
+                lastProgressUpdate = Date()
+
+                // Parse volume
+                volume = EventParser.parseVolume(from: anyCodableData)
             }
         } catch {
             AppLogger.errors.logError(error, context: "fetchPlayerState(for: \(playerId))")
@@ -233,6 +314,10 @@ class PlayerService: ObservableObject {
     }
 
     func seek(to position: Double) async {
+        // Optimistically update progress for immediate UI feedback (bidirectional sync)
+        progress = position
+        lastProgressUpdate = Date()
+
         do {
             guard let client = client else {
                 throw PlayerError.networkError("No client available")
@@ -254,6 +339,9 @@ class PlayerService: ObservableObject {
     }
 
     func setVolume(_ volume: Double) async {
+        // Optimistically update volume for immediate UI feedback (bidirectional sync)
+        self.volume = volume
+
         do {
             guard let client = client else {
                 throw PlayerError.networkError("No client available")

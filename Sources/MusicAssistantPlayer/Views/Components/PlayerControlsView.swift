@@ -18,6 +18,7 @@ struct PlayerControlsView: View {
     let onSkipPrevious: () -> Void
     let onSkipNext: () -> Void
     let onSeek: (TimeInterval) -> Void
+    let onVolumeChange: (Double) -> Void
     let onShuffle: () -> Void
     let onLike: () -> Void
     let onRepeat: () -> Void
@@ -87,7 +88,7 @@ struct PlayerControlsView: View {
             }
 
             // Volume control
-            VolumeControl(volume: $volume)
+            VolumeControl(volume: $volume, onVolumeChange: onVolumeChange)
         }
         .padding()
     }
@@ -114,6 +115,7 @@ struct PlayerControlsView: View {
                     onSkipPrevious: {},
                     onSkipNext: {},
                     onSeek: { _ in },
+                    onVolumeChange: { _ in },
                     onShuffle: {},
                     onLike: {},
                     onRepeat: {}
@@ -133,6 +135,7 @@ struct PlayerControlsView: View {
                     onSkipPrevious: {},
                     onSkipNext: {},
                     onSeek: { _ in },
+                    onVolumeChange: { _ in },
                     onShuffle: {},
                     onLike: {},
                     onRepeat: {}

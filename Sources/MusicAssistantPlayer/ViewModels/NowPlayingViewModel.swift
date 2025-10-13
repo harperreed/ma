@@ -17,7 +17,6 @@ class NowPlayingViewModel: ObservableObject {
     @Published private(set) var artworkURL: URL?
     @Published private(set) var progress: TimeInterval = 0.0
     @Published private(set) var duration: TimeInterval = 0.0
-
     @Published var volume: Double = 50.0
     @Published var isShuffled: Bool = false
     @Published var isLiked: Bool = false
@@ -48,6 +47,9 @@ class NowPlayingViewModel: ObservableObject {
 
         playerService.$progress
             .assign(to: &$progress)
+
+        playerService.$volume
+            .assign(to: &$volume)
     }
 
     func play() {
@@ -75,8 +77,16 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func seek(to time: TimeInterval) {
+        print("DEBUG: Seeking to time: \(time) seconds")
         Task {
             await playerService.seek(to: time)
+        }
+    }
+
+    func setVolume(_ volume: Double) {
+        print("DEBUG: Setting volume to: \(volume)")
+        Task {
+            await playerService.setVolume(volume)
         }
     }
 
