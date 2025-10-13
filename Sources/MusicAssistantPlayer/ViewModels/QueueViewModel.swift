@@ -92,6 +92,49 @@ class QueueViewModel: ObservableObject {
         await playerService.setRepeat(mode: nextMode)
     }
 
+    // MARK: - Queue Manipulation
+
+    func removeTrack(id: String, from queueId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await queueService.removeItem(itemId: id, from: queueId)
+            errorMessage = nil
+        } catch let error as QueueError {
+            errorMessage = error.localizedDescription
+        } catch {
+            errorMessage = "Failed to remove track"
+        }
+    }
+
+    func moveTrack(id: String, from oldIndex: Int, to newIndex: Int, in queueId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await queueService.moveItem(itemId: id, from: oldIndex, to: newIndex, in: queueId)
+            errorMessage = nil
+        } catch let error as QueueError {
+            errorMessage = error.localizedDescription
+        } catch {
+            errorMessage = "Failed to move track"
+        }
+    }
+
+    // MARK: - Error Handling
+
+    func clearError() {
+        queueService.lastError = nil
+        errorMessage = nil
+    }
+
+    // MARK: - Computed Properties
+
+    var queueId: String? {
+        playerService?.selectedPlayer?.id
+    }
+
     // MARK: - Statistics
 
     var trackCount: Int {

@@ -180,4 +180,77 @@ final class QueueViewModelTests: XCTestCase {
 
         // The method itself works correctly - rollback is expected behavior when client is nil
     }
+
+    @MainActor
+    func testRemoveTrackSetsLoadingAndCallsService() async {
+        let service = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: service)
+
+        await viewModel.removeTrack(id: "test-id", from: "test-queue")
+
+        // Should set error message when client is nil
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    @MainActor
+    func testRemoveTrackHandlesError() async {
+        let service = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: service)
+
+        await viewModel.removeTrack(id: "test-id", from: "test-queue")
+
+        // Should have error message
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.errorMessage?.contains("client") ?? false)
+    }
+
+    @MainActor
+    func testMoveTrackSetsLoadingAndCallsService() async {
+        let service = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: service)
+
+        await viewModel.moveTrack(id: "test-id", from: 0, to: 5, in: "test-queue")
+
+        // Should set error message when client is nil
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    @MainActor
+    func testMoveTrackHandlesError() async {
+        let service = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: service)
+
+        await viewModel.moveTrack(id: "test-id", from: 0, to: 5, in: "test-queue")
+
+        // Should have error message
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.errorMessage?.contains("client") ?? false)
+    }
+
+    @MainActor
+    func testQueueIdFromPlayerService() {
+        let playerService = PlayerService(client: nil)
+        let queueService = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: queueService, playerService: playerService)
+
+        // Without a selected player, queueId should be nil
+        XCTAssertNil(viewModel.queueId)
+    }
+
+    @MainActor
+    func testClearErrorResetsState() async {
+        let service = QueueService(client: nil)
+        let viewModel = QueueViewModel(queueService: service)
+
+        // Trigger an error
+        await viewModel.removeTrack(id: "test", from: "queue")
+        XCTAssertNotNil(viewModel.errorMessage)
+
+        // Clear error
+        viewModel.clearError()
+
+        // Error should be cleared
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertNil(service.lastError)
+    }
 }
