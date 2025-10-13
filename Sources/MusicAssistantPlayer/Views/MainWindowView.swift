@@ -95,8 +95,8 @@ struct MainWindowView: View {
     }
 
     private func shouldShowQueue(for size: CGSize) -> Bool {
-        // Hide queue on very small windows to prioritize now playing
-        size.width >= 900
+        // Hide queue on smaller windows to prioritize now playing with large album art
+        size.width >= 1000
     }
 
     private func fetchInitialData() async {
