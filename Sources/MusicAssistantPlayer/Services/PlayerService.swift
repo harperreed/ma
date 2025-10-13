@@ -16,6 +16,7 @@ class PlayerService: ObservableObject {
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
     internal var eventTask: Task<Void, Never>?
+    private var connectionMonitorTask: Task<Void, Never>?
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -25,24 +26,31 @@ class PlayerService: ObservableObject {
 
     deinit {
         eventTask?.cancel()
+        connectionMonitorTask?.cancel()
     }
 
     private func monitorConnection() {
-        guard let client = client else {
-            connectionState = .disconnected
-            return
-        }
+        connectionMonitorTask?.cancel()
 
-        Task {
+        connectionMonitorTask = Task { [weak self] in
+            guard let client = self?.client else {
+                await MainActor.run { [weak self] in
+                    self?.connectionState = .disconnected
+                }
+                return
+            }
+
             // Check connection status periodically
-            connectionState = .connecting
+            await MainActor.run { [weak self] in
+                self?.connectionState = .connecting
+            }
 
             // Wait a bit for initial connection
             try? await Task.sleep(for: .seconds(2))
 
             let isConnected = await client.isConnected
-            await MainActor.run {
-                self.connectionState = isConnected ? .connected : .error("Not connected")
+            await MainActor.run { [weak self] in
+                self?.connectionState = isConnected ? .connected : .error("Not connected")
             }
         }
     }
