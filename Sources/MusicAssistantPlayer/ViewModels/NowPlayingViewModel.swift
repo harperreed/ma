@@ -21,6 +21,7 @@ class NowPlayingViewModel: ObservableObject {
     @Published var isShuffled: Bool = false
     @Published var isLiked: Bool = false
     @Published var repeatMode: RepeatMode = .off
+    @Published private(set) var currentTrack: Track?
 
     // Callback to notify parent when player selection changes
     var onPlayerSelectionChange: ((Player) -> Void)?
@@ -33,6 +34,7 @@ class NowPlayingViewModel: ObservableObject {
     private func setupBindings() {
         playerService.$currentTrack
             .sink { [weak self] track in
+                self?.currentTrack = track
                 self?.trackTitle = track?.title ?? "No Track Playing"
                 self?.artistName = track?.artist ?? ""
                 self?.albumName = track?.album ?? ""

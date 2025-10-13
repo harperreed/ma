@@ -93,7 +93,8 @@ struct MainWindowView: View {
                 // Queue (right panel, responsive width)
                 if shouldShowQueue(for: geometry.size) {
                     QueueView(
-                        viewModel: QueueViewModel(queueService: queueService)
+                        viewModel: QueueViewModel(queueService: queueService),
+                        currentTrack: nowPlayingViewModel.currentTrack
                     )
                     .frame(width: queueWidth(for: geometry.size))
                 }

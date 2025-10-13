@@ -5,6 +5,7 @@ import SwiftUI
 
 struct QueueView: View {
     @ObservedObject var viewModel: QueueViewModel
+    let currentTrack: Track?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,7 +25,11 @@ struct QueueView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(viewModel.tracks.enumerated()), id: \.element.id) { index, track in
-                            QueueTrackRow(track: track, index: index + 1)
+                            QueueTrackRow(
+                                track: track,
+                                index: index + 1,
+                                isCurrentTrack: track.id == currentTrack?.id
+                            )
 
                             if index < viewModel.tracks.count - 1 {
                                 Divider()
@@ -56,14 +61,22 @@ struct QueueView: View {
 struct QueueTrackRow: View {
     let track: Track
     let index: Int
+    let isCurrentTrack: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            // Index
-            Text("\(index)")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
-                .frame(width: 30, alignment: .trailing)
+            // Index or now playing indicator
+            if isCurrentTrack {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.green)
+                    .frame(width: 30, alignment: .trailing)
+            } else {
+                Text("\(index)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(width: 30, alignment: .trailing)
+            }
 
             // Thumbnail
             if let artworkURL = track.artworkURL {
@@ -83,14 +96,20 @@ struct QueueTrackRow: View {
             // Track info
             VStack(alignment: .leading, spacing: 4) {
                 Text(track.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 14, weight: isCurrentTrack ? .semibold : .medium))
                     .foregroundColor(.white)
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text(track.artist)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.6))
+                    if isCurrentTrack {
+                        Text("Now Playing")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.green)
+                    } else {
+                        Text(track.artist)
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
                     Text("•")
                         .foregroundColor(.white.opacity(0.3))
                     Text(track.formattedDuration)
@@ -104,6 +123,7 @@ struct QueueTrackRow: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .background(isCurrentTrack ? Color.green.opacity(0.1) : Color.clear)
     }
 
     private var thumbnailPlaceholder: some View {
@@ -126,6 +146,9 @@ struct QueueTrackRow: View {
         Track(id: "3", title: "Track Three", artist: "Artist Three", album: "Album", duration: 220, artworkURL: nil)
     ]
 
-    return QueueView(viewModel: QueueViewModel(queueService: queueService))
+    return QueueView(
+        viewModel: QueueViewModel(queueService: queueService),
+        currentTrack: Track(id: "1", title: "Track One", artist: "Artist One", album: "Album", duration: 180, artworkURL: nil)
+    )
         .frame(width: 350, height: 600)
 }
