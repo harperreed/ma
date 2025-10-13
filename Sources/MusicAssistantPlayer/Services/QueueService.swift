@@ -62,4 +62,52 @@ class QueueService: ObservableObject {
             }
         }
     }
+
+    func clearQueue() async throws {
+        guard let queueId = queueId else {
+            throw QueueError.queueEmpty
+        }
+        guard let client = client else {
+            throw QueueError.networkFailure
+        }
+
+        do {
+            try await client.clearQueue(queueId: queueId)
+            await MainActor.run {
+                self.upcomingTracks = []
+            }
+        } catch {
+            throw QueueError.networkFailure
+        }
+    }
+
+    func shuffle(enabled: Bool) async throws {
+        guard let queueId = queueId else {
+            throw QueueError.queueEmpty
+        }
+        guard let client = client else {
+            throw QueueError.networkFailure
+        }
+
+        do {
+            try await client.shuffle(queueId: queueId, enabled: enabled)
+        } catch {
+            throw QueueError.networkFailure
+        }
+    }
+
+    func setRepeat(mode: String) async throws {
+        guard let queueId = queueId else {
+            throw QueueError.queueEmpty
+        }
+        guard let client = client else {
+            throw QueueError.networkFailure
+        }
+
+        do {
+            try await client.setRepeat(queueId: queueId, mode: mode)
+        } catch {
+            throw QueueError.networkFailure
+        }
+    }
 }
