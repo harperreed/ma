@@ -58,13 +58,13 @@ class NowPlayingViewModel: ObservableObject {
 
     func play() {
         Task {
-            try? await playerService.play()
+            await playerService.play()
         }
     }
 
     func pause() {
         Task {
-            try? await playerService.pause()
+            await playerService.pause()
         }
     }
 

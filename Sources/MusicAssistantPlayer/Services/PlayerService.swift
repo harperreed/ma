@@ -12,6 +12,7 @@ class PlayerService: ObservableObject {
     @Published var progress: TimeInterval = 0.0
     @Published var selectedPlayer: Player?
     @Published var connectionState: ConnectionState = .disconnected
+    @Published var lastError: PlayerError?
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
@@ -130,22 +131,55 @@ class PlayerService: ObservableObject {
         }
     }
 
-    func play() async throws {
-        guard let client = client,
-              let player = selectedPlayer else { return }
-        try await client.play(playerId: player.id)
+    func play() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.play(playerId: player.id)
+            lastError = nil // Clear on success
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("play", reason: error.localizedDescription)
+        }
     }
 
-    func pause() async throws {
-        guard let client = client,
-              let player = selectedPlayer else { return }
-        try await client.pause(playerId: player.id)
+    func pause() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.pause(playerId: player.id)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("pause", reason: error.localizedDescription)
+        }
     }
 
-    func stop() async throws {
-        guard let client = client,
-              let player = selectedPlayer else { return }
-        try await client.stop(playerId: player.id)
+    func stop() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.stop(playerId: player.id)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("stop", reason: error.localizedDescription)
+        }
     }
 
     // Note: Skip next/previous methods to be implemented when API support is added
