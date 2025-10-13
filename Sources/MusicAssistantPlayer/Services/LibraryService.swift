@@ -51,7 +51,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key from sort and filter parameters
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "artists_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "artists_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -170,7 +170,7 @@ class LibraryService: ObservableObject {
         // Build cache key from sort, filter, and artist parameters
         let artistKey = artistId ?? "all"
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "albums_\(artistKey)_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "albums_\(artistKey)_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -307,7 +307,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "playlists_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "playlists_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -429,7 +429,7 @@ class LibraryService: ObservableObject {
         // Build cache key
         let albumKey = albumId ?? "all"
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "tracks_\(albumKey)_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "tracks_\(albumKey)_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -574,7 +574,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "radios_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "radios_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -690,7 +690,7 @@ class LibraryService: ObservableObject {
 
         // Build cache key
         let filterKey = filterBy.isEmpty ? "default" : "\(filterBy.hashValue)"
-        let cacheKey = "genres_\(sortBy.rawValue)_\(filterKey)_\(fetchOffset)"
+        let cacheKey = "genres_\(sortBy.rawValue)_\(filterKey)"
 
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
@@ -931,29 +931,17 @@ class LibraryService: ObservableObject {
     }
 
     func invalidateCache(for category: LibraryCategory) {
-        // Remove all cache entries for this category
-        // Since we build keys with category prefix, we need to iterate and remove matching keys
-        let prefix: String
-        switch category {
-        case .artists:
-            prefix = "artists_"
-        case .albums:
-            prefix = "albums_"
-        case .tracks:
-            prefix = "tracks_"
-        case .playlists:
-            prefix = "playlists_"
-        case .radio:
-            prefix = "radio_"
-        case .genres:
-            prefix = "genres_"
-        }
+        // Note: Currently clears the entire cache regardless of category.
+        // LibraryCache doesn't yet support prefix-based filtering. Since cache
+        // is per-instance and rebuilds quickly, clearing all cache is acceptable.
+        //
+        // Future improvement: Implement prefix-based cache removal in LibraryCache
+        // to only clear entries matching category prefixes like:
+        // artists_, albums_, tracks_, playlists_, radios_, genres_
 
-        // For now, clear the entire cache. A more sophisticated implementation
-        // would track cache keys and only remove those matching the prefix.
-        // This is acceptable since cache is per-instance and will be rebuilt quickly.
+        // Clear entire cache (not category-specific yet)
         cache.clear()
-        AppLogger.network.debug("Library cache invalidated for category: \(category.displayName)")
+        AppLogger.network.debug("Library cache cleared (requested for: \(category.displayName))")
     }
 
     func refreshCache(for category: LibraryCategory) async throws {
