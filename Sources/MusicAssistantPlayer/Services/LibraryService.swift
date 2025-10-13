@@ -76,8 +76,92 @@ class LibraryService: ObservableObject {
         }
     }
 
+    // MARK: - Task 7: Fetch Albums
+
+    func fetchAlbums(for artistId: String? = nil) async throws {
+        guard let client = client else {
+            self.error = "No client available"
+            throw NSError(domain: "LibraryService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No client available"])
+        }
+
+        do {
+            // Music Assistant API: music/albums/library_items
+            // If artistId is provided, we can filter by artist
+            let result: AnyCodable?
+            if let artistId = artistId {
+                // Fetch albums for specific artist
+                result = try await client.sendCommand(
+                    command: "music/albums/library_items",
+                    args: ["artist": artistId]
+                )
+            } else {
+                // Fetch all albums
+                result = try await client.sendCommand(command: "music/albums/library_items")
+            }
+
+            if let result = result {
+                let parsedAlbums = parseAlbums(from: result)
+                self.albums = parsedAlbums
+                self.error = nil
+            } else {
+                self.albums = []
+                self.error = nil
+            }
+        } catch {
+            self.error = "Failed to fetch albums: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
+    private func parseAlbums(from data: AnyCodable) -> [Album] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            guard let id = item["item_id"] as? String,
+                  let title = item["name"] as? String
+            else {
+                return nil
+            }
+
+            // Extract artist name - could be a string or array of artist objects
+            let artist: String
+            if let artistName = item["artist"] as? String {
+                artist = artistName
+            } else if let artists = item["artists"] as? [[String: Any]],
+                      let firstArtist = artists.first,
+                      let artistName = firstArtist["name"] as? String {
+                artist = artistName
+            } else {
+                artist = "Unknown Artist"
+            }
+
+            let artworkURL: URL?
+            if let metadata = item["metadata"] as? [String: Any],
+               let imageURLString = metadata["image"] as? String {
+                artworkURL = URL(string: imageURLString)
+            } else {
+                artworkURL = nil
+            }
+
+            let trackCount = item["track_count"] as? Int ?? 0
+            let year = item["year"] as? Int
+            let duration = item["duration"] as? Double ?? 0.0
+
+            return Album(
+                id: id,
+                title: title,
+                artist: artist,
+                artworkURL: artworkURL,
+                trackCount: trackCount,
+                year: year,
+                duration: duration
+            )
+        }
+    }
+
     // Methods to be added in subsequent tasks:
-    // - fetchAlbums(for artistId: String?)
     // - fetchTracks(for albumId: String)
     // - fetchPlaylists()
     // - playNow(item:on:)

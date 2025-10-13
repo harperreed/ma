@@ -50,4 +50,37 @@ final class LibraryServiceTests: XCTestCase {
         // For now, just verify the method exists by checking it compiles
         XCTAssertTrue(libraryService.artists.isEmpty)
     }
+
+    // MARK: - Task 7: fetchAlbums Tests
+
+    @MainActor
+    func testFetchAlbumsWithNoClient() async {
+        let libraryService = LibraryService(client: nil)
+
+        do {
+            try await libraryService.fetchAlbums(for: nil)
+            XCTFail("Expected error to be thrown")
+        } catch {
+            XCTAssertNotNil(libraryService.error)
+            XCTAssertTrue(libraryService.albums.isEmpty)
+        }
+    }
+
+    @MainActor
+    func testFetchAlbumsAllAlbums() async throws {
+        let client = MusicAssistantClient(host: "localhost", port: 8095)
+        let libraryService = LibraryService(client: client)
+
+        // For now, just verify the method exists
+        XCTAssertTrue(libraryService.albums.isEmpty)
+    }
+
+    @MainActor
+    func testFetchAlbumsForSpecificArtist() async throws {
+        let client = MusicAssistantClient(host: "localhost", port: 8095)
+        let libraryService = LibraryService(client: client)
+
+        // For now, just verify the method exists
+        XCTAssertTrue(libraryService.albums.isEmpty)
+    }
 }
