@@ -9,8 +9,6 @@ struct MiniPlayerMenuButton: View {
     let onPlayerSelect: (Player) -> Void
     let onShowQueue: () -> Void
 
-    @State private var showMenu = false
-
     var body: some View {
         VStack {
             // Top-center menu button

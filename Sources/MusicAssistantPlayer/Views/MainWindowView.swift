@@ -56,8 +56,8 @@ struct MainWindowView: View {
                             selectedPlayer: selectedPlayer,
                             availablePlayers: availablePlayers
                         )
-                        vm.onPlayerSelectionChange = { [self] player in
-                            self.selectedPlayer = player
+                        vm.onPlayerSelectionChange = { player in
+                            selectedPlayer = player
                         }
                         return vm
                     }()
