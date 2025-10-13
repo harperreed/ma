@@ -19,6 +19,8 @@ class PlayerService: ObservableObject {
     @Published var selectedPlayer: Player?
     @Published var connectionState: ConnectionState = .disconnected
     @Published var lastError: PlayerError?
+    @Published var isShuffled: Bool = false
+    @Published var repeatMode: String = "off" // "off", "all", "one"
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
@@ -161,6 +163,20 @@ class PlayerService: ObservableObject {
                         AppLogger.player.debug("Volume update: \(newVolume)")
                         self.volume = newVolume
                     }
+
+                    // Parse shuffle state
+                    let newShuffled = EventParser.parseShuffleState(from: event.data)
+                    if newShuffled != self.isShuffled {
+                        AppLogger.player.debug("Shuffle update: \(newShuffled)")
+                        self.isShuffled = newShuffled
+                    }
+
+                    // Parse repeat mode
+                    let newRepeatMode = EventParser.parseRepeatMode(from: event.data)
+                    if newRepeatMode != self.repeatMode {
+                        AppLogger.player.debug("Repeat mode update: \(newRepeatMode)")
+                        self.repeatMode = newRepeatMode
+                    }
                 }
             }
         }
@@ -207,6 +223,12 @@ class PlayerService: ObservableObject {
 
                 // Parse volume
                 volume = EventParser.parseVolume(from: anyCodableData)
+
+                // Parse shuffle state
+                isShuffled = EventParser.parseShuffleState(from: anyCodableData)
+
+                // Parse repeat mode
+                repeatMode = EventParser.parseRepeatMode(from: anyCodableData)
             }
         } catch {
             AppLogger.errors.logError(error, context: "fetchPlayerState(for: \(playerId))")
@@ -398,6 +420,76 @@ class PlayerService: ObservableObject {
         } catch {
             AppLogger.errors.logError(error, context: "ungroup()")
             self.lastError = .commandFailed("ungroup", reason: error.localizedDescription)
+        }
+    }
+
+    func setShuffle(enabled: Bool) async {
+        // Optimistically update for immediate UI feedback
+        self.isShuffled = enabled
+
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            AppLogger.player.info("Setting shuffle to: \(enabled) on player: \(player.name)")
+
+            // Music Assistant API: player_queues/queue_command with shuffle
+            try await client.sendCommand(
+                command: "player_queues/queue_command",
+                args: [
+                    "queue_id": player.id,
+                    "command": "shuffle",
+                    "shuffle": enabled
+                ]
+            )
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "setShuffle(\(enabled))")
+            lastError = error
+            // Rollback on failure
+            self.isShuffled = !enabled
+        } catch {
+            AppLogger.errors.logError(error, context: "setShuffle(\(enabled))")
+            lastError = .commandFailed("setShuffle", reason: error.localizedDescription)
+            self.isShuffled = !enabled
+        }
+    }
+
+    func setRepeat(mode: String) async {
+        // Optimistically update for immediate UI feedback
+        self.repeatMode = mode
+
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            AppLogger.player.info("Setting repeat to: \(mode) on player: \(player.name)")
+
+            // Music Assistant API: player_queues/queue_command with repeat
+            try await client.sendCommand(
+                command: "player_queues/queue_command",
+                args: [
+                    "queue_id": player.id,
+                    "command": "repeat",
+                    "repeat": mode
+                ]
+            )
+            lastError = nil
+        } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "setRepeat(\(mode))")
+            lastError = error
+            // Rollback on failure
+            self.repeatMode = mode == "off" ? "all" : "off"
+        } catch {
+            AppLogger.errors.logError(error, context: "setRepeat(\(mode))")
+            lastError = .commandFailed("setRepeat", reason: error.localizedDescription)
+            self.repeatMode = mode == "off" ? "all" : "off"
         }
     }
 }

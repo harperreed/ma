@@ -332,4 +332,29 @@ final class PlayerServiceTests: XCTestCase {
 
         XCTAssertNotNil(service.lastError)
     }
+
+    // MARK: - Shuffle/Repeat Tests
+
+    @MainActor
+    func testSetShufflePublishesError() async {
+        let service = PlayerService(client: nil)
+
+        await service.setShuffle(enabled: true)
+
+        XCTAssertNotNil(service.lastError)
+        if case .networkError = service.lastError {
+            // Expected
+        } else {
+            XCTFail("Expected networkError")
+        }
+    }
+
+    @MainActor
+    func testSetRepeatPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        await service.setRepeat(mode: "all")
+
+        XCTAssertNotNil(service.lastError)
+    }
 }
