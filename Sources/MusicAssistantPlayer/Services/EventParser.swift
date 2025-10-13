@@ -107,7 +107,8 @@ enum EventParser {
             return shuffle
         }
         // Also check queue_settings if present
-        if let queueSettings = data["queue_settings"] as? [String: Any],
+        if let queueSettingsWrapper = data["queue_settings"],
+           let queueSettings = queueSettingsWrapper.value as? [String: Any],
            let shuffle = queueSettings["shuffle"] as? Bool {
             return shuffle
         }
@@ -119,7 +120,8 @@ enum EventParser {
             return repeatMode
         }
         // Also check queue_settings if present
-        if let queueSettings = data["queue_settings"] as? [String: Any],
+        if let queueSettingsWrapper = data["queue_settings"],
+           let queueSettings = queueSettingsWrapper.value as? [String: Any],
            let repeatMode = queueSettings["repeat"] as? String {
             return repeatMode
         }

@@ -279,6 +279,28 @@ final class EventParserTests: XCTestCase {
         XCTAssertFalse(isShuffled)
     }
 
+    func testParseShuffleStateFromQueueSettings() {
+        let data: [String: AnyCodable] = [
+            "queue_settings": AnyCodable([
+                "shuffle": true
+            ] as [String: Any])
+        ]
+
+        let isShuffled = EventParser.parseShuffleState(from: data)
+        XCTAssertTrue(isShuffled, "Should parse shuffle state from queue_settings")
+    }
+
+    func testParseShuffleStateFromQueueSettingsFalse() {
+        let data: [String: AnyCodable] = [
+            "queue_settings": AnyCodable([
+                "shuffle": false
+            ] as [String: Any])
+        ]
+
+        let isShuffled = EventParser.parseShuffleState(from: data)
+        XCTAssertFalse(isShuffled, "Should parse shuffle state from queue_settings")
+    }
+
     // MARK: - Repeat Mode Parsing Tests
 
     func testParseRepeatMode() {
@@ -295,6 +317,29 @@ final class EventParserTests: XCTestCase {
     func testParseRepeatModeDefault() {
         let data: [String: AnyCodable] = [:]
         XCTAssertEqual(EventParser.parseRepeatMode(from: data), "off")
+    }
+
+    func testParseRepeatModeFromQueueSettings() {
+        let dataAll: [String: AnyCodable] = [
+            "queue_settings": AnyCodable([
+                "repeat": "all"
+            ] as [String: Any])
+        ]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataAll), "all", "Should parse repeat mode from queue_settings")
+
+        let dataOne: [String: AnyCodable] = [
+            "queue_settings": AnyCodable([
+                "repeat": "one"
+            ] as [String: Any])
+        ]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataOne), "one", "Should parse repeat mode from queue_settings")
+
+        let dataOff: [String: AnyCodable] = [
+            "queue_settings": AnyCodable([
+                "repeat": "off"
+            ] as [String: Any])
+        ]
+        XCTAssertEqual(EventParser.parseRepeatMode(from: dataOff), "off", "Should parse repeat mode from queue_settings")
     }
 
     // MARK: - Group Status Parsing Tests
