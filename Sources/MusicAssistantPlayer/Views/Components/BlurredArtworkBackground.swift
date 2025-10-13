@@ -41,7 +41,6 @@ struct BlurredArtworkBackground: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
     }
 
     #if canImport(AppKit)

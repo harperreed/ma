@@ -70,9 +70,13 @@ struct NowPlayingView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
-                )
+                .background(Color.black)
+                // TODO: Fix BlurredArtworkBackground - it interferes with layout calculations
+                // causing text to be cut off. Need to find a way to render background
+                // without affecting GeometryReader sizing.
+                // .background(
+                //     BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
+                // )
                 .overlay(
                     // Show menu button in miniplayer mode (< 700px width)
                     Group {
