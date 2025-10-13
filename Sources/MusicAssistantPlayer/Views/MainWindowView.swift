@@ -3,6 +3,7 @@
 
 import SwiftUI
 import MusicAssistantKit
+import os.log
 
 struct MainWindowView: View {
     let client: MusicAssistantClient
@@ -171,7 +172,7 @@ struct MainWindowView: View {
                 }
             }
         } catch {
-            print("Failed to fetch players: \(error)")
+            AppLogger.network.error("Failed to fetch players: \(error.localizedDescription)")
         }
     }
 
@@ -237,7 +238,7 @@ struct MainWindowView: View {
                 }
             }
         } catch {
-            print("Failed to refresh players: \(error)")
+            AppLogger.network.error("Failed to refresh players: \(error.localizedDescription)")
         }
     }
 }

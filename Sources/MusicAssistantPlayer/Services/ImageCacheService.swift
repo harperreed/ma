@@ -4,6 +4,7 @@
 #if canImport(AppKit)
 import AppKit
 import SwiftUI
+import os.log
 
 @MainActor
 class ImageCacheService: ObservableObject {
@@ -22,10 +23,15 @@ class ImageCacheService: ObservableObject {
 
     func cacheImage(_ image: NSImage, for url: URL) {
         imageCache.setObject(image, forKey: url as NSURL)
+        AppLogger.cache.debug("Cached image for URL: \(url.absoluteString)")
     }
 
     func getImage(for url: URL) -> NSImage? {
-        return imageCache.object(forKey: url as NSURL)
+        let image = imageCache.object(forKey: url as NSURL)
+        if image != nil {
+            AppLogger.cache.debug("Cache hit for image: \(url.absoluteString)")
+        }
+        return image
     }
 
     // MARK: - Color Caching
@@ -33,15 +39,21 @@ class ImageCacheService: ObservableObject {
     func cacheColor(_ color: Color, for url: URL) {
         let wrapper = ColorWrapper(color: color)
         colorCache.setObject(wrapper, forKey: url as NSURL)
+        AppLogger.cache.debug("Cached color for URL: \(url.absoluteString)")
     }
 
     func getColor(for url: URL) -> Color? {
-        return colorCache.object(forKey: url as NSURL)?.color
+        let color = colorCache.object(forKey: url as NSURL)?.color
+        if color != nil {
+            AppLogger.cache.debug("Cache hit for color: \(url.absoluteString)")
+        }
+        return color
     }
 
     // MARK: - Cache Management
 
     func clearCache() {
+        AppLogger.cache.info("Clearing all caches")
         imageCache.removeAllObjects()
         colorCache.removeAllObjects()
     }

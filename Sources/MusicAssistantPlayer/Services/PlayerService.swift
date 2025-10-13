@@ -4,6 +4,7 @@
 import Foundation
 import Combine
 import MusicAssistantKit
+import os.log
 
 @MainActor
 class PlayerService: ObservableObject {
@@ -90,7 +91,7 @@ class PlayerService: ObservableObject {
 
     func fetchPlayerState(for playerId: String) async {
         guard let client = client else {
-            print("⚠️ [PlayerService] No client to fetch player state")
+            AppLogger.player.warning("No client to fetch player state")
             return
         }
 
@@ -127,7 +128,7 @@ class PlayerService: ObservableObject {
                 progress = EventParser.parseProgress(from: anyCodableData)
             }
         } catch {
-            print("❌ [PlayerService] Failed to fetch player state: \(error)")
+            AppLogger.errors.logError(error, context: "fetchPlayerState(for: \(playerId))")
         }
     }
 
@@ -139,11 +140,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.info("Playing on player: \(player.name)")
             try await client.play(playerId: player.id)
             lastError = nil // Clear on success
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "play()")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "play()")
             lastError = .commandFailed("play", reason: error.localizedDescription)
         }
     }
@@ -156,11 +160,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.info("Pausing player: \(player.name)")
             try await client.pause(playerId: player.id)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "pause()")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "pause()")
             lastError = .commandFailed("pause", reason: error.localizedDescription)
         }
     }
@@ -173,11 +180,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.info("Stopping player: \(player.name)")
             try await client.stop(playerId: player.id)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "stop()")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "stop()")
             lastError = .commandFailed("stop", reason: error.localizedDescription)
         }
     }
@@ -190,11 +200,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.info("Skipping to next track on player: \(player.name)")
             try await client.next(playerId: player.id)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "skipNext()")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "skipNext()")
             lastError = .commandFailed("skip next", reason: error.localizedDescription)
         }
     }
@@ -207,11 +220,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.info("Skipping to previous track on player: \(player.name)")
             try await client.previous(playerId: player.id)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "skipPrevious()")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "skipPrevious()")
             lastError = .commandFailed("skip previous", reason: error.localizedDescription)
         }
     }
@@ -224,11 +240,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.debug("Seeking to position: \(position) on player: \(player.name)")
             try await client.seek(playerId: player.id, position: position)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "seek(to: \(position))")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "seek(to: \(position))")
             lastError = .commandFailed("seek", reason: error.localizedDescription)
         }
     }
@@ -241,11 +260,14 @@ class PlayerService: ObservableObject {
             guard let player = selectedPlayer else {
                 throw PlayerError.playerNotFound("No player selected")
             }
+            AppLogger.player.debug("Setting volume to: \(volume) on player: \(player.name)")
             try await client.setVolume(playerId: player.id, volume: volume)
             lastError = nil
         } catch let error as PlayerError {
+            AppLogger.errors.logPlayerError(error, context: "setVolume(\(volume))")
             lastError = error
         } catch {
+            AppLogger.errors.logError(error, context: "setVolume(\(volume))")
             lastError = .commandFailed("set volume", reason: error.localizedDescription)
         }
     }
