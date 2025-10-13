@@ -14,6 +14,9 @@ class LibraryService: ObservableObject {
     @Published var tracks: [Track] = []
     @Published var providers: [String] = []
     @Published var lastError: LibraryError?
+    @Published var hasMoreItems: Bool = false
+    @Published var currentOffset: Int = 0
+    private let pageSize: Int = 50
 
     private(set) var client: MusicAssistantClient?
 
@@ -21,32 +24,58 @@ class LibraryService: ObservableObject {
         self.client = client
     }
 
-    // MARK: - Task 6: Fetch Artists
+    // MARK: - Task 6: Fetch Artists (with Task 7 pagination)
 
-    func fetchArtists() async throws {
+    func fetchArtists(limit: Int? = nil, offset: Int? = nil) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
             throw error
         }
 
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         do {
-            // Music Assistant API: music/artists/library_items
-            let result = try await client.sendCommand(command: "music/artists/library_items")
+            AppLogger.network.info("Fetching artists: limit=\(fetchLimit), offset=\(fetchOffset)")
+
+            // Music Assistant API with pagination
+            let result = try await client.sendCommand(
+                command: "music/artists/library_items",
+                args: [
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
 
             if let result = result {
                 let parsedArtists = parseArtists(from: result)
-                self.artists = parsedArtists
-                self.lastError = nil
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.artists = parsedArtists
+                } else {
+                    // Subsequent pages - append
+                    self.artists.append(contentsOf: parsedArtists)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedArtists.count
+                self.hasMoreItems = parsedArtists.count == fetchLimit
+
+                lastError = nil
             } else {
                 self.artists = []
-                self.lastError = nil
+                self.hasMoreItems = false
+                lastError = nil
             }
         } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchArtists")
             lastError = error
             throw error
         } catch {
             let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchArtists")
             lastError = libError
             throw libError
         }
@@ -84,43 +113,65 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Task 7: Fetch Albums
+    // MARK: - Task 7: Fetch Albums (with pagination)
 
-    func fetchAlbums(for artistId: String? = nil) async throws {
+    func fetchAlbums(for artistId: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
             throw error
         }
 
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         do {
+            AppLogger.network.info("Fetching albums: limit=\(fetchLimit), offset=\(fetchOffset)")
+
             // Music Assistant API: music/albums/library_items
-            // If artistId is provided, we can filter by artist
-            let result: AnyCodable?
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset
+            ]
+
+            // If artistId is provided, filter by artist
             if let artistId = artistId {
-                // Fetch albums for specific artist
-                result = try await client.sendCommand(
-                    command: "music/albums/library_items",
-                    args: ["artist": artistId]
-                )
-            } else {
-                // Fetch all albums
-                result = try await client.sendCommand(command: "music/albums/library_items")
+                args["artist"] = artistId
             }
+
+            let result = try await client.sendCommand(
+                command: "music/albums/library_items",
+                args: args
+            )
 
             if let result = result {
                 let parsedAlbums = parseAlbums(from: result)
-                self.albums = parsedAlbums
-                self.lastError = nil
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.albums = parsedAlbums
+                } else {
+                    // Subsequent pages - append
+                    self.albums.append(contentsOf: parsedAlbums)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedAlbums.count
+                self.hasMoreItems = parsedAlbums.count == fetchLimit
+
+                lastError = nil
             } else {
                 self.albums = []
-                self.lastError = nil
+                self.hasMoreItems = false
+                lastError = nil
             }
         } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchAlbums")
             lastError = error
             throw error
         } catch {
             let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchAlbums")
             lastError = libError
             throw libError
         }
@@ -174,32 +225,58 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Task 8: Fetch Playlists
+    // MARK: - Task 8: Fetch Playlists (with pagination)
 
-    func fetchPlaylists() async throws {
+    func fetchPlaylists(limit: Int? = nil, offset: Int? = nil) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
             throw error
         }
 
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         do {
+            AppLogger.network.info("Fetching playlists: limit=\(fetchLimit), offset=\(fetchOffset)")
+
             // Music Assistant API: music/playlists/library_items
-            let result = try await client.sendCommand(command: "music/playlists/library_items")
+            let result = try await client.sendCommand(
+                command: "music/playlists/library_items",
+                args: [
+                    "limit": fetchLimit,
+                    "offset": fetchOffset
+                ]
+            )
 
             if let result = result {
                 let parsedPlaylists = parsePlaylists(from: result)
-                self.playlists = parsedPlaylists
-                self.lastError = nil
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.playlists = parsedPlaylists
+                } else {
+                    // Subsequent pages - append
+                    self.playlists.append(contentsOf: parsedPlaylists)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedPlaylists.count
+                self.hasMoreItems = parsedPlaylists.count == fetchLimit
+
+                lastError = nil
             } else {
                 self.playlists = []
-                self.lastError = nil
+                self.hasMoreItems = false
+                lastError = nil
             }
         } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchPlaylists")
             lastError = error
             throw error
         } catch {
             let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchPlaylists")
             lastError = libError
             throw libError
         }
@@ -240,42 +317,65 @@ class LibraryService: ObservableObject {
         }
     }
 
-    // MARK: - Fetch Tracks
+    // MARK: - Fetch Tracks (with pagination)
 
-    func fetchTracks(for albumId: String? = nil) async throws {
+    func fetchTracks(for albumId: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws {
         guard let client = client else {
             let error = LibraryError.noClientAvailable
             lastError = error
             throw error
         }
 
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+
         do {
+            AppLogger.network.info("Fetching tracks: limit=\(fetchLimit), offset=\(fetchOffset)")
+
             // Music Assistant API: music/tracks/library_items
-            let result: AnyCodable?
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset
+            ]
+
+            // If albumId is provided, filter by album
             if let albumId = albumId {
-                // Fetch tracks for specific album
-                result = try await client.sendCommand(
-                    command: "music/tracks/library_items",
-                    args: ["album": albumId]
-                )
-            } else {
-                // Fetch all tracks
-                result = try await client.sendCommand(command: "music/tracks/library_items")
+                args["album"] = albumId
             }
+
+            let result = try await client.sendCommand(
+                command: "music/tracks/library_items",
+                args: args
+            )
 
             if let result = result {
                 let parsedTracks = parseTracks(from: result)
-                self.tracks = parsedTracks
-                self.lastError = nil
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.tracks = parsedTracks
+                } else {
+                    // Subsequent pages - append
+                    self.tracks.append(contentsOf: parsedTracks)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedTracks.count
+                self.hasMoreItems = parsedTracks.count == fetchLimit
+
+                lastError = nil
             } else {
                 self.tracks = []
-                self.lastError = nil
+                self.hasMoreItems = false
+                lastError = nil
             }
         } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchTracks")
             lastError = error
             throw error
         } catch {
             let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchTracks")
             lastError = libError
             throw libError
         }
@@ -454,6 +554,35 @@ class LibraryService: ObservableObject {
             lastError = libError
             throw libError
         }
+    }
+
+    // MARK: - Pagination Methods
+
+    func loadNextPage(for category: LibraryCategory) async throws {
+        guard hasMoreItems else {
+            AppLogger.network.debug("No more items to load")
+            return
+        }
+
+        switch category {
+        case .artists:
+            try await fetchArtists(limit: pageSize, offset: currentOffset)
+        case .albums:
+            try await fetchAlbums(for: nil, limit: pageSize, offset: currentOffset)
+        case .tracks:
+            try await fetchTracks(for: nil, limit: pageSize, offset: currentOffset)
+        case .playlists:
+            try await fetchPlaylists(limit: pageSize, offset: currentOffset)
+        case .radio, .genres:
+            let error = LibraryError.categoryNotImplemented(category)
+            lastError = error
+            throw error
+        }
+    }
+
+    func resetPagination() {
+        currentOffset = 0
+        hasMoreItems = false
     }
 
     // Methods to be added in subsequent tasks:

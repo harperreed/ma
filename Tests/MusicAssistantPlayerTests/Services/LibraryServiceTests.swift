@@ -121,4 +121,39 @@ final class LibraryServiceTests: XCTestCase {
             XCTAssertTrue(error is LibraryError)
         }
     }
+
+    // MARK: - Task 7: Pagination Tests
+
+    @MainActor
+    func testFetchArtistsPaginatedWithNoClient() async {
+        let service = LibraryService(client: nil)
+
+        do {
+            // Test that the method accepts pagination parameters
+            try await service.fetchArtists(limit: 10, offset: 0)
+            XCTFail("Expected error to be thrown")
+        } catch {
+            XCTAssertNotNil(service.lastError)
+            XCTAssertTrue(error is LibraryError)
+        }
+    }
+
+    @MainActor
+    func testPaginationStateInitialValues() {
+        let service = LibraryService(client: nil)
+
+        XCTAssertFalse(service.hasMoreItems)
+        XCTAssertEqual(service.currentOffset, 0)
+    }
+
+    @MainActor
+    func testResetPagination() {
+        let service = LibraryService(client: nil)
+
+        // This will test resetPagination once implemented
+        service.resetPagination()
+
+        XCTAssertFalse(service.hasMoreItems)
+        XCTAssertEqual(service.currentOffset, 0)
+    }
 }
