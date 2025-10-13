@@ -198,4 +198,24 @@ final class EventParserTests: XCTestCase {
         XCTAssertNotNil(track)
         XCTAssertEqual(track?.duration, 180.0, "Should convert Int duration to Double")
     }
+
+    // MARK: - Shared Duration Parsing Tests
+
+    func testParseDuration() {
+        // Test with Double value
+        let validDuration = EventParser.parseDuration(from: 354.5)
+        XCTAssertEqual(validDuration, 354.5, "Should parse Double duration correctly")
+
+        // Test with Int value
+        let intDuration = EventParser.parseDuration(from: 180)
+        XCTAssertEqual(intDuration, 180.0, "Should convert Int duration to Double")
+
+        // Test with nil value
+        let zeroDuration = EventParser.parseDuration(from: nil)
+        XCTAssertEqual(zeroDuration, 0.0, "Should return 0.0 for nil duration")
+
+        // Test with invalid type
+        let invalidDuration = EventParser.parseDuration(from: "not a number")
+        XCTAssertEqual(invalidDuration, 0.0, "Should return 0.0 for invalid duration type")
+    }
 }

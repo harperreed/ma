@@ -5,6 +5,19 @@ import Foundation
 import MusicAssistantKit
 
 enum EventParser {
+    // MARK: - Shared Parsing Utilities
+
+    static func parseDuration(from value: Any?) -> Double {
+        if let duration = value as? Double {
+            return duration
+        } else if let duration = value as? Int {
+            return Double(duration)
+        }
+        return 0.0
+    }
+
+    // MARK: - Event Parsing
+
     static func parseTrack(from data: [String: AnyCodable]) -> Track? {
         guard let currentMediaWrapper = data["current_media"],
               let currentMedia = currentMediaWrapper.value as? [String: Any]
@@ -15,16 +28,7 @@ enum EventParser {
         let title = currentMedia["title"] as? String ?? "Unknown Track"
         let artist = currentMedia["artist"] as? String ?? "Unknown Artist"
         let album = currentMedia["album"] as? String ?? "Unknown Album"
-
-        // Duration can be Int or Double
-        let duration: Double
-        if let durationInt = currentMedia["duration"] as? Int {
-            duration = Double(durationInt)
-        } else if let durationDouble = currentMedia["duration"] as? Double {
-            duration = durationDouble
-        } else {
-            duration = 0.0
-        }
+        let duration = parseDuration(from: currentMedia["duration"])
 
         var artworkURL: URL?
         if let imageURLString = currentMedia["image_url"] as? String {
@@ -87,16 +91,7 @@ enum EventParser {
             let title = item["title"] as? String ?? "Unknown Track"
             let artist = item["artist"] as? String ?? "Unknown Artist"
             let album = item["album"] as? String ?? "Unknown Album"
-
-            // Duration can be Int or Double
-            let duration: Double
-            if let durationInt = item["duration"] as? Int {
-                duration = Double(durationInt)
-            } else if let durationDouble = item["duration"] as? Double {
-                duration = durationDouble
-            } else {
-                duration = 0.0
-            }
+            let duration = parseDuration(from: item["duration"])
 
             var artworkURL: URL?
             if let imageURLString = item["image_url"] as? String {
