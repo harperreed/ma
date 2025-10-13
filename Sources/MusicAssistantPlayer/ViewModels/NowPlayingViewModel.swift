@@ -15,7 +15,7 @@ class NowPlayingViewModel: ObservableObject {
     @Published private(set) var albumName: String = ""
     @Published private(set) var isPlaying: Bool = false
     @Published private(set) var artworkURL: URL?
-    @Published var progress: TimeInterval = 0.0
+    @Published private(set) var progress: TimeInterval = 0.0
     @Published private(set) var duration: TimeInterval = 0.0
     @Published var volume: Double = 50.0
     @Published var isShuffled: Bool = false
@@ -26,6 +26,14 @@ class NowPlayingViewModel: ObservableObject {
     // Debouncing subjects for volume and seek
     private var volumeSubject = PassthroughSubject<Double, Never>()
     private var seekSubject = PassthroughSubject<TimeInterval, Never>()
+
+    // Flags to prevent service updates during user interaction
+    private var isUserAdjustingVolume = false
+    private var isUserSeeking = false
+
+    // Debounce intervals
+    private let volumeDebounceInterval: TimeInterval = 0.3
+    private let seekDebounceInterval: TimeInterval = 0.5
 
     // Callback to notify parent when player selection changes
     var onPlayerSelectionChange: ((Player) -> Void)?
@@ -67,7 +75,7 @@ class NowPlayingViewModel: ObservableObject {
             .sink { [weak self] serviceProgress in
                 // Only update from service if we're not actively seeking
                 // This prevents service updates from fighting with optimistic UI updates
-                guard let self = self else { return }
+                guard let self = self, !self.isUserSeeking else { return }
                 self.progress = serviceProgress
             }
             .store(in: &cancellables)
@@ -77,7 +85,7 @@ class NowPlayingViewModel: ObservableObject {
         playerService.$volume
             .sink { [weak self] serviceVolume in
                 // Update from service, but optimistic updates take precedence
-                guard let self = self else { return }
+                guard let self = self, !self.isUserAdjustingVolume else { return }
                 self.volume = serviceVolume
             }
             .store(in: &cancellables)
@@ -100,22 +108,28 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     private func setupDebouncing() {
-        // Volume changes debounced to 300ms
+        // Volume changes debounced to prevent excessive API calls
         volumeSubject
-            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .debounce(for: .seconds(volumeDebounceInterval), scheduler: RunLoop.main)
             .sink { [weak self] volume in
                 Task { [weak self] in
                     await self?.playerService.setVolume(volume)
+                    await MainActor.run { [weak self] in
+                        self?.isUserAdjustingVolume = false
+                    }
                 }
             }
             .store(in: &cancellables)
 
-        // Seek changes debounced to 500ms (longer for scrubbing)
+        // Seek changes debounced (longer interval for scrubbing)
         seekSubject
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .debounce(for: .seconds(seekDebounceInterval), scheduler: RunLoop.main)
             .sink { [weak self] time in
                 Task { [weak self] in
                     await self?.playerService.seek(to: time)
+                    await MainActor.run { [weak self] in
+                        self?.isUserSeeking = false
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -147,6 +161,7 @@ class NowPlayingViewModel: ObservableObject {
 
     func seek(to time: TimeInterval) {
         // Update local state immediately for responsive UI
+        isUserSeeking = true
         self.progress = time
         // Send through debounced subject
         seekSubject.send(time)
@@ -154,6 +169,7 @@ class NowPlayingViewModel: ObservableObject {
 
     func setVolume(_ volume: Double) {
         // Update local state immediately for responsive UI
+        isUserAdjustingVolume = true
         self.volume = volume
         // Send through debounced subject
         volumeSubject.send(volume)
