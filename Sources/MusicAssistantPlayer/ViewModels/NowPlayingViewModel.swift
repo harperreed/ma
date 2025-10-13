@@ -40,6 +40,13 @@ class NowPlayingViewModel: ObservableObject {
                 self?.albumName = track?.album ?? ""
                 self?.artworkURL = track?.artworkURL
                 self?.duration = track?.duration ?? 0.0
+
+                // Check if new track is favorited
+                if let trackId = track?.id {
+                    Task { [weak self] in
+                        await self?.playerService.checkIfFavorite(trackId: trackId)
+                    }
+                }
             }
             .store(in: &cancellables)
 
@@ -52,6 +59,22 @@ class NowPlayingViewModel: ObservableObject {
 
         playerService.$volume
             .assign(to: &$volume)
+
+        playerService.$isShuffled
+            .assign(to: &$isShuffled)
+
+        playerService.$repeatMode
+            .map { mode -> RepeatMode in
+                switch mode {
+                case "all": return .all
+                case "one": return .one
+                default: return .off
+                }
+            }
+            .assign(to: &$repeatMode)
+
+        playerService.$isFavorite
+            .assign(to: &$isLiked)
     }
 
     func play() {
@@ -79,39 +102,44 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func seek(to time: TimeInterval) {
-        print("DEBUG: Seeking to time: \(time) seconds")
         Task {
             await playerService.seek(to: time)
         }
     }
 
     func setVolume(_ volume: Double) {
-        print("DEBUG: Setting volume to: \(volume)")
         Task {
             await playerService.setVolume(volume)
         }
     }
 
     func toggleShuffle() {
-        isShuffled.toggle()
-        // TODO: Call Music Assistant API
-        print("Shuffle: \(isShuffled) (not yet implemented)")
+        Task {
+            await playerService.setShuffle(enabled: !isShuffled)
+        }
     }
 
     func toggleLike() {
-        isLiked.toggle()
-        // TODO: Persist to favorites
-        print("Liked: \(isLiked)")
+        guard let trackId = currentTrack?.id else {
+            return
+        }
+
+        Task {
+            await playerService.toggleFavorite(trackId: trackId)
+        }
     }
 
     func cycleRepeatMode() {
+        let nextMode: String
         switch repeatMode {
-        case .off: repeatMode = .all
-        case .all: repeatMode = .one
-        case .one: repeatMode = .off
+        case .off: nextMode = "all"
+        case .all: nextMode = "one"
+        case .one: nextMode = "off"
         }
-        // TODO: Call Music Assistant API
-        print("Repeat mode: \(repeatMode)")
+
+        Task {
+            await playerService.setRepeat(mode: nextMode)
+        }
     }
 
     func handlePlayerSelection(_ player: Player) {
