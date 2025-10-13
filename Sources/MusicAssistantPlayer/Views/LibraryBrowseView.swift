@@ -17,6 +17,12 @@ struct LibraryBrowseView: View {
             )
             .padding()
 
+            // Sort and Filter toolbar
+            LibraryToolbar(viewModel: viewModel)
+
+            Divider()
+                .background(Color.white.opacity(0.1))
+
             // Content area
             ScrollView {
                 if viewModel.isLoading {
