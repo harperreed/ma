@@ -33,6 +33,28 @@ struct QueueView: View {
             Divider()
                 .background(Color.white.opacity(0.1))
 
+            // Error banner
+            if let errorMessage = viewModel.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(errorMessage)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Button(action: {
+                        viewModel.errorMessage = nil
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.2))
+            }
+
             // Queue list
             if viewModel.tracks.isEmpty {
                 emptyState
