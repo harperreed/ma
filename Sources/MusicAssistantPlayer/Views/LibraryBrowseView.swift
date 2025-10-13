@@ -46,35 +46,85 @@ struct LibraryBrowseView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        switch viewModel.selectedCategory {
-        case .artists:
-            ArtistsGridView(
-                artists: viewModel.artists,
-                onPlayNow: { onPlayNow($0.id, .artist) },
-                onAddToQueue: { onAddToQueue($0.id, .artist) }
-            )
-        case .albums:
-            AlbumsGridView(
-                albums: viewModel.albums,
-                onPlayNow: { onPlayNow($0.id, .album) },
-                onAddToQueue: { onAddToQueue($0.id, .album) }
-            )
-        case .tracks:
-            TracksListView(
-                tracks: viewModel.tracks,
-                onPlayNow: { onPlayNow($0.id, .track) },
-                onAddToQueue: { onAddToQueue($0.id, .track) }
-            )
-        case .playlists:
-            PlaylistsListView(
-                playlists: viewModel.playlists,
-                onPlayNow: { onPlayNow($0.id, .playlist) },
-                onAddToQueue: { onAddToQueue($0.id, .playlist) }
-            )
-        case .radio, .genres:
-            Text("Coming Soon")
-                .foregroundColor(.white.opacity(0.5))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 0) {
+            switch viewModel.selectedCategory {
+            case .artists:
+                ArtistsGridView(
+                    artists: viewModel.artists,
+                    onPlayNow: { onPlayNow($0.id, .artist) },
+                    onAddToQueue: { onAddToQueue($0.id, .artist) },
+                    onLoadMore: {
+                        Task {
+                            await viewModel.loadMore()
+                        }
+                    }
+                )
+            case .albums:
+                AlbumsGridView(
+                    albums: viewModel.albums,
+                    onPlayNow: { onPlayNow($0.id, .album) },
+                    onAddToQueue: { onAddToQueue($0.id, .album) },
+                    onLoadMore: {
+                        Task {
+                            await viewModel.loadMore()
+                        }
+                    }
+                )
+            case .tracks:
+                TracksListView(
+                    tracks: viewModel.tracks,
+                    onPlayNow: { onPlayNow($0.id, .track) },
+                    onAddToQueue: { onAddToQueue($0.id, .track) },
+                    onLoadMore: {
+                        Task {
+                            await viewModel.loadMore()
+                        }
+                    }
+                )
+            case .playlists:
+                PlaylistsListView(
+                    playlists: viewModel.playlists,
+                    onPlayNow: { onPlayNow($0.id, .playlist) },
+                    onAddToQueue: { onAddToQueue($0.id, .playlist) },
+                    onLoadMore: {
+                        Task {
+                            await viewModel.loadMore()
+                        }
+                    }
+                )
+            case .radio, .genres:
+                Text("Coming Soon")
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Pagination UI - Load More button
+            if viewModel.hasMoreItems {
+                Button(action: {
+                    Task {
+                        await viewModel.loadMore()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .scaleEffect(0.8)
+                                .tint(.white.opacity(0.7))
+                        }
+                        Text(viewModel.isLoading ? "Loading..." : "Load More")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.white.opacity(0.7))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(8)
+                .padding()
+                .disabled(viewModel.isLoading)
+            }
         }
     }
 }

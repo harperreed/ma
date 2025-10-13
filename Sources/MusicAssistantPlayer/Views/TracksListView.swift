@@ -7,6 +7,7 @@ struct TracksListView: View {
     let tracks: [Track]
     let onPlayNow: (Track) -> Void
     let onAddToQueue: (Track) -> Void
+    var onLoadMore: (() -> Void)? = nil
 
     var body: some View {
         ScrollView {
@@ -17,6 +18,12 @@ struct TracksListView: View {
                         onPlayNow: { onPlayNow(track) },
                         onAddToQueue: { onAddToQueue(track) }
                     )
+                    .onAppear {
+                        // Trigger load more when the last item appears
+                        if track.id == tracks.last?.id {
+                            onLoadMore?()
+                        }
+                    }
                 }
             }
             .padding()

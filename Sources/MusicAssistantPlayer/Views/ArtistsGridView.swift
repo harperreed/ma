@@ -7,6 +7,7 @@ struct ArtistsGridView: View {
     let artists: [Artist]
     let onPlayNow: (Artist) -> Void
     let onAddToQueue: (Artist) -> Void
+    var onLoadMore: (() -> Void)? = nil
 
     private let columns = [
         GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 20)
@@ -20,6 +21,12 @@ struct ArtistsGridView: View {
                     onPlayNow: { onPlayNow(artist) },
                     onAddToQueue: { onAddToQueue(artist) }
                 )
+                .onAppear {
+                    // Trigger load more when the last item appears
+                    if artist.id == artists.last?.id {
+                        onLoadMore?()
+                    }
+                }
             }
         }
         .padding()

@@ -7,6 +7,7 @@ struct PlaylistsListView: View {
     let playlists: [Playlist]
     let onPlayNow: (Playlist) -> Void
     let onAddToQueue: (Playlist) -> Void
+    var onLoadMore: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 1) {
@@ -16,6 +17,12 @@ struct PlaylistsListView: View {
                     onPlayNow: { onPlayNow(playlist) },
                     onAddToQueue: { onAddToQueue(playlist) }
                 )
+                .onAppear {
+                    // Trigger load more when the last item appears
+                    if playlist.id == playlists.last?.id {
+                        onLoadMore?()
+                    }
+                }
             }
         }
         .padding()
