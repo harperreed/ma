@@ -182,16 +182,71 @@ class PlayerService: ObservableObject {
         }
     }
 
-    // Note: Skip next/previous methods to be implemented when API support is added
-    // func skipNext() async throws {
-    //     guard let client = client,
-    //           let player = selectedPlayer else { return }
-    //     // TODO: Implement when API supports next track command
-    // }
-    //
-    // func skipPrevious() async throws {
-    //     guard let client = client,
-    //           let player = selectedPlayer else { return }
-    //     // TODO: Implement when API supports previous track command
-    // }
+    func skipNext() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.next(playerId: player.id)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("skip next", reason: error.localizedDescription)
+        }
+    }
+
+    func skipPrevious() async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.previous(playerId: player.id)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("skip previous", reason: error.localizedDescription)
+        }
+    }
+
+    func seek(to position: Double) async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.seek(playerId: player.id, position: position)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("seek", reason: error.localizedDescription)
+        }
+    }
+
+    func setVolume(_ volume: Double) async {
+        do {
+            guard let client = client else {
+                throw PlayerError.networkError("No client available")
+            }
+            guard let player = selectedPlayer else {
+                throw PlayerError.playerNotFound("No player selected")
+            }
+            try await client.setVolume(playerId: player.id, volume: volume)
+            lastError = nil
+        } catch let error as PlayerError {
+            lastError = error
+        } catch {
+            lastError = .commandFailed("set volume", reason: error.localizedDescription)
+        }
+    }
 }

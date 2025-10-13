@@ -131,4 +131,60 @@ final class PlayerServiceTests: XCTestCase {
         // Verify error is published
         XCTAssertNotNil(service.lastError)
     }
+
+    @MainActor
+    func testSkipNextPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        // Initially no error
+        XCTAssertNil(service.lastError)
+
+        // Trigger error by calling skipNext without client
+        await service.skipNext()
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+    }
+
+    @MainActor
+    func testSkipPreviousPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        // Initially no error
+        XCTAssertNil(service.lastError)
+
+        // Trigger error by calling skipPrevious without client
+        await service.skipPrevious()
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+    }
+
+    @MainActor
+    func testSeekPublishesError() async {
+        let service = PlayerService(client: nil)
+
+        // Initially no error
+        XCTAssertNil(service.lastError)
+
+        // Trigger error by calling seek without client
+        await service.seek(to: 30.0)
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+    }
+
+    @MainActor
+    func testSetVolumePublishesError() async {
+        let service = PlayerService(client: nil)
+
+        // Initially no error
+        XCTAssertNil(service.lastError)
+
+        // Trigger error by calling setVolume without client
+        await service.setVolume(50.0)
+
+        // Verify error is published
+        XCTAssertNotNil(service.lastError)
+    }
 }

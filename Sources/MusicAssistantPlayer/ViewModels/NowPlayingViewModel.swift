@@ -69,18 +69,21 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func skipNext() {
-        // TODO: Implement when MusicAssistantKit adds next() method
+        Task {
+            await playerService.skipNext()
+        }
     }
 
     func skipPrevious() {
-        // TODO: Implement when MusicAssistantKit adds previous() method
+        Task {
+            await playerService.skipPrevious()
+        }
     }
 
     func seek(to time: TimeInterval) {
-        // TODO: Call Music Assistant API when seek is supported
-        // For now, just log the attempt - don't update progress directly
-        // as it's bound to playerService and will be overwritten
-        print("Seek to \(time) (not yet implemented in API)")
+        Task {
+            await playerService.seek(to: time)
+        }
     }
 
     func toggleShuffle() {
