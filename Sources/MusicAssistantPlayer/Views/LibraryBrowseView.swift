@@ -39,10 +39,11 @@ struct LibraryBrowseView: View {
     private var contentView: some View {
         switch viewModel.selectedCategory {
         case .artists:
-            // Will be implemented in ArtistsGridView component
-            Text("Artists View Coming Soon")
-                .foregroundColor(.white.opacity(0.5))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ArtistsGridView(
+                artists: viewModel.artists,
+                onPlayNow: { onPlayNow($0.id, .artist) },
+                onAddToQueue: { onAddToQueue($0.id, .artist) }
+            )
         case .albums:
             // Will be implemented in AlbumsGridView component
             Text("Albums View Coming Soon")
