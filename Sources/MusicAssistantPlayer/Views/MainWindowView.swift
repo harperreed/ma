@@ -10,6 +10,7 @@ struct MainWindowView: View {
 
     @StateObject private var playerService: PlayerService
     @StateObject private var queueService: QueueService
+    @StateObject private var nowPlayingViewModel: NowPlayingViewModel
 
     @State private var selectedPlayer: Player?
     @State private var availablePlayers: [Player] = []
@@ -26,6 +27,7 @@ struct MainWindowView: View {
         // Initialize StateObjects
         _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)
+        _nowPlayingViewModel = StateObject(wrappedValue: NowPlayingViewModel(playerService: playerSvc))
     }
 
     var body: some View {
@@ -50,19 +52,17 @@ struct MainWindowView: View {
 
                 // Now Playing (center hero)
                 NowPlayingView(
-                    viewModel: {
-                        let vm = NowPlayingViewModel(
-                            playerService: playerService,
-                            selectedPlayer: selectedPlayer,
-                            availablePlayers: availablePlayers
-                        )
-                        vm.onPlayerSelectionChange = { player in
-                            selectedPlayer = player
-                        }
-                        return vm
-                    }()
+                    viewModel: nowPlayingViewModel,
+                    selectedPlayer: $selectedPlayer,
+                    availablePlayers: availablePlayers
                 )
                 .frame(maxWidth: .infinity)
+                .onAppear {
+                    // Set up callback for player selection from miniplayer menu
+                    nowPlayingViewModel.onPlayerSelectionChange = { player in
+                        selectedPlayer = player
+                    }
+                }
 
                 // Queue (right panel, responsive width)
                 if shouldShowQueue(for: geometry.size) {

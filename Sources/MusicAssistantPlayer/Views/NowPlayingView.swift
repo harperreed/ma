@@ -5,6 +5,8 @@ import SwiftUI
 
 struct NowPlayingView: View {
     @ObservedObject var viewModel: NowPlayingViewModel
+    @Binding var selectedPlayer: Player?
+    let availablePlayers: [Player]
 
     var body: some View {
         GeometryReader { geometry in
@@ -91,8 +93,8 @@ struct NowPlayingView: View {
                     Group {
                         if geometry.size.width < 700 {
                             MiniPlayerMenuButton(
-                                selectedPlayer: viewModel.selectedPlayer,
-                                availablePlayers: viewModel.availablePlayers,
+                                selectedPlayer: selectedPlayer,
+                                availablePlayers: availablePlayers,
                                 onPlayerSelect: { player in
                                     viewModel.handlePlayerSelection(player)
                                 },
@@ -132,21 +134,49 @@ struct NowPlayingView: View {
 }
 
 #Preview {
-    NowPlayingView(
-        viewModel: {
-            let playerService = PlayerService()
-            playerService.currentTrack = Track(
-                id: "1",
-                title: "Bohemian Rhapsody",
-                artist: "Queen",
-                album: "A Night at the Opera",
-                duration: 354.0,
-                artworkURL: nil
-            )
-            playerService.playbackState = .playing
-            playerService.progress = 120.0
+    struct PreviewWrapper: View {
+        @State private var selectedPlayer: Player? = Player(
+            id: "test-player",
+            name: "Test Player",
+            isActive: true,
+            type: .player,
+            groupChildIds: [],
+            syncedTo: nil,
+            activeGroup: nil
+        )
 
-            return NowPlayingViewModel(playerService: playerService)
-        }()
-    )
+        var body: some View {
+            NowPlayingView(
+                viewModel: {
+                    let playerService = PlayerService()
+                    playerService.currentTrack = Track(
+                        id: "1",
+                        title: "Bohemian Rhapsody",
+                        artist: "Queen",
+                        album: "A Night at the Opera",
+                        duration: 354.0,
+                        artworkURL: nil
+                    )
+                    playerService.playbackState = .playing
+                    playerService.progress = 120.0
+
+                    return NowPlayingViewModel(playerService: playerService)
+                }(),
+                selectedPlayer: $selectedPlayer,
+                availablePlayers: [
+                    Player(
+                        id: "test-player",
+                        name: "Test Player",
+                        isActive: true,
+                        type: .player,
+                        groupChildIds: [],
+                        syncedTo: nil,
+                        activeGroup: nil
+                    )
+                ]
+            )
+        }
+    }
+
+    return PreviewWrapper()
 }

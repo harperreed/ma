@@ -23,17 +23,11 @@ class NowPlayingViewModel: ObservableObject {
     @Published var isLiked: Bool = false
     @Published var repeatMode: RepeatMode = .off
 
-    // Miniplayer menu support
-    @Published var selectedPlayer: Player?
-    @Published var availablePlayers: [Player] = []
-
     // Callback to notify parent when player selection changes
     var onPlayerSelectionChange: ((Player) -> Void)?
 
-    init(playerService: PlayerService, selectedPlayer: Player? = nil, availablePlayers: [Player] = []) {
+    init(playerService: PlayerService) {
         self.playerService = playerService
-        self.selectedPlayer = selectedPlayer
-        self.availablePlayers = availablePlayers
         setupBindings()
     }
 
@@ -109,7 +103,6 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     func handlePlayerSelection(_ player: Player) {
-        selectedPlayer = player
         playerService.selectedPlayer = player
         onPlayerSelectionChange?(player)
 
