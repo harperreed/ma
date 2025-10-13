@@ -36,4 +36,35 @@ final class PlayerServiceTests: XCTestCase {
         let service = PlayerService(client: nil)
         XCTAssertNotNil(service)
     }
+
+    @MainActor
+    func testEventSubscriptionCancellation() async {
+        let service = PlayerService(client: nil)
+
+        // Start subscription - creates task even with nil client (exits early)
+        service.subscribeToPlayerEvents()
+
+        // Verify task is created
+        XCTAssertNotNil(service.eventTask)
+
+        // Store reference to first task
+        let firstTask = service.eventTask
+
+        // Now test that calling subscribeToPlayerEvents() again
+        // properly cancels the existing task and creates a new one
+        service.subscribeToPlayerEvents()
+
+        // Wait a moment for cancellation to propagate
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        // Verify first task was cancelled
+        XCTAssertTrue(firstTask?.isCancelled ?? false)
+
+        // Verify new task was created
+        XCTAssertNotNil(service.eventTask)
+
+        // Verify service is still functional
+        XCTAssertNotNil(service)
+        XCTAssertEqual(service.connectionState, .disconnected)
+    }
 }

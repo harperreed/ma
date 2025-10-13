@@ -15,11 +15,11 @@ class PlayerService: ObservableObject {
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
-    private var eventTask: Task<Void, Never>?
+    internal var eventTask: Task<Void, Never>?
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
-        setupEventSubscriptions()
+        subscribeToPlayerEvents()
         monitorConnection()
     }
 
@@ -47,19 +47,19 @@ class PlayerService: ObservableObject {
         }
     }
 
-    private func setupEventSubscriptions() {
-        guard let client = client else {
-            return
-        }
+    func subscribeToPlayerEvents() {
+        // Cancel any existing task to prevent memory leaks
+        eventTask?.cancel()
 
-        // Subscribe to player update events and store the task
         eventTask = Task { [weak self] in
-            guard let self = self else { return }
+            guard let client = self?.client else { return }
 
             for await event in await client.events.playerUpdates.values {
-                await MainActor.run {
-                    // Only process events for selected player
-                    guard let selectedPlayer = self.selectedPlayer,
+                guard let self = self else { return }
+
+                await MainActor.run { [weak self] in
+                    guard let self = self,
+                          let selectedPlayer = self.selectedPlayer,
                           event.playerId == selectedPlayer.id else {
                         return
                     }
