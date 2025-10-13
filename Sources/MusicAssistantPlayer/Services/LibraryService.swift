@@ -12,6 +12,8 @@ class LibraryService: ObservableObject {
     @Published var albums: [Album] = []
     @Published var playlists: [Playlist] = []
     @Published var tracks: [Track] = []
+    @Published var radios: [Radio] = []
+    @Published var genres: [Genre] = []
     @Published var providers: [String] = []
     @Published var lastError: LibraryError?
     @Published var hasMoreItems: Bool = false
@@ -487,6 +489,199 @@ class LibraryService: ObservableObject {
         }
     }
 
+    // MARK: - Task 9: Fetch Radios (with pagination, sorting, and filtering)
+
+    func fetchRadios(
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        do {
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching radios: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
+
+            // Music Assistant API: music/radios/library_items
+            let result = try await client.sendCommand(
+                command: "music/radios/library_items",
+                args: args
+            )
+
+            if let result = result {
+                let parsedRadios = parseRadios(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.radios = parsedRadios
+                } else {
+                    // Subsequent pages - append
+                    self.radios.append(contentsOf: parsedRadios)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedRadios.count
+                self.hasMoreItems = parsedRadios.count == fetchLimit
+
+                lastError = nil
+            } else {
+                self.radios = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchRadios")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchRadios")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    private func parseRadios(from data: AnyCodable) -> [Radio] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            guard let id = item["item_id"] as? String,
+                  let name = item["name"] as? String
+            else {
+                return nil
+            }
+
+            let artworkURL: URL?
+            if let metadata = item["metadata"] as? [String: Any],
+               let imageURLString = metadata["image"] as? String {
+                artworkURL = URL(string: imageURLString)
+            } else {
+                artworkURL = nil
+            }
+
+            let provider = item["provider"] as? String
+
+            return Radio(
+                id: id,
+                name: name,
+                artworkURL: artworkURL,
+                provider: provider
+            )
+        }
+    }
+
+    // MARK: - Task 9: Fetch Genres (with pagination, sorting, and filtering)
+
+    func fetchGenres(
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sort: LibrarySortOption? = nil,
+        filter: LibraryFilter? = nil
+    ) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        let fetchLimit = limit ?? pageSize
+        let fetchOffset = offset ?? currentOffset
+        let sortBy = sort ?? currentSort
+        let filterBy = filter ?? currentFilter
+
+        do {
+            var args: [String: Any] = [
+                "limit": fetchLimit,
+                "offset": fetchOffset,
+                "order_by": sortBy.rawValue
+            ]
+
+            // Merge filter args
+            args.merge(filterBy.toAPIArgs()) { (_, new) in new }
+
+            AppLogger.network.info("Fetching genres: limit=\(fetchLimit), offset=\(fetchOffset), sort=\(sortBy.rawValue)")
+
+            // Music Assistant API: music/genres/library_items
+            let result = try await client.sendCommand(
+                command: "music/genres/library_items",
+                args: args
+            )
+
+            if let result = result {
+                let parsedGenres = parseGenres(from: result)
+
+                if offset == 0 || offset == nil && currentOffset == 0 {
+                    // First page - replace
+                    self.genres = parsedGenres
+                } else {
+                    // Subsequent pages - append
+                    self.genres.append(contentsOf: parsedGenres)
+                }
+
+                // Update pagination state
+                self.currentOffset = fetchOffset + parsedGenres.count
+                self.hasMoreItems = parsedGenres.count == fetchLimit
+
+                lastError = nil
+            } else {
+                self.genres = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "fetchGenres")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "fetchGenres")
+            lastError = libError
+            throw libError
+        }
+    }
+
+    private func parseGenres(from data: AnyCodable) -> [Genre] {
+        guard let items = data.value as? [[String: Any]] else {
+            return []
+        }
+
+        return items.compactMap { item in
+            guard let id = item["item_id"] as? String,
+                  let name = item["name"] as? String
+            else {
+                return nil
+            }
+
+            let itemCount = item["item_count"] as? Int ?? 0
+
+            return Genre(
+                id: id,
+                name: name,
+                itemCount: itemCount
+            )
+        }
+    }
+
     // MARK: - Fetch Providers
 
     func fetchProviders() async throws {
@@ -556,10 +751,10 @@ class LibraryService: ObservableObject {
                 try await fetchTracks(for: nil)
             case .playlists:
                 try await fetchPlaylists()
-            case .radio, .genres:
-                let error = LibraryError.categoryNotImplemented(category)
-                lastError = error
-                throw error
+            case .radio:
+                try await fetchRadios()
+            case .genres:
+                try await fetchGenres()
             }
             return
         }
@@ -587,10 +782,10 @@ class LibraryService: ObservableObject {
                     self.tracks = parseTracks(from: result)
                 case .playlists:
                     self.playlists = parsePlaylists(from: result)
-                case .radio, .genres:
-                    let error = LibraryError.categoryNotImplemented(category)
-                    lastError = error
-                    throw error
+                case .radio:
+                    self.radios = parseRadios(from: result)
+                case .genres:
+                    self.genres = parseGenres(from: result)
                 }
                 lastError = nil
             }
@@ -623,10 +818,10 @@ class LibraryService: ObservableObject {
             try await fetchTracks(for: nil, limit: pageSize, offset: currentOffset)
         case .playlists:
             try await fetchPlaylists(limit: pageSize, offset: currentOffset)
-        case .radio, .genres:
-            let error = LibraryError.categoryNotImplemented(category)
-            lastError = error
-            throw error
+        case .radio:
+            try await fetchRadios(limit: pageSize, offset: currentOffset)
+        case .genres:
+            try await fetchGenres(limit: pageSize, offset: currentOffset)
         }
     }
 
