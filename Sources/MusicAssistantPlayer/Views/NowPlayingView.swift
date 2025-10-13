@@ -73,6 +73,21 @@ struct NowPlayingView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Show menu button in miniplayer mode (< 700px width)
+                if geometry.size.width < 700 {
+                    MiniPlayerMenuButton(
+                        selectedPlayer: viewModel.selectedPlayer,
+                        availablePlayers: viewModel.availablePlayers,
+                        onPlayerSelect: { player in
+                            viewModel.handlePlayerSelection(player)
+                        },
+                        onShowQueue: {
+                            // TODO: Implement queue popover in next task
+                            print("Show queue requested")
+                        }
+                    )
+                }
             }
         }
     }
@@ -102,19 +117,21 @@ struct NowPlayingView: View {
 }
 
 #Preview {
-    let playerService = PlayerService()
-    playerService.currentTrack = Track(
-        id: "1",
-        title: "Bohemian Rhapsody",
-        artist: "Queen",
-        album: "A Night at the Opera",
-        duration: 354.0,
-        artworkURL: nil
-    )
-    playerService.playbackState = .playing
-    playerService.progress = 120.0
+    NowPlayingView(
+        viewModel: {
+            let playerService = PlayerService()
+            playerService.currentTrack = Track(
+                id: "1",
+                title: "Bohemian Rhapsody",
+                artist: "Queen",
+                album: "A Night at the Opera",
+                duration: 354.0,
+                artworkURL: nil
+            )
+            playerService.playbackState = .playing
+            playerService.progress = 120.0
 
-    return NowPlayingView(
-        viewModel: NowPlayingViewModel(playerService: playerService)
+            return NowPlayingViewModel(playerService: playerService)
+        }()
     )
 }

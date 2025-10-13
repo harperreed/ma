@@ -3,6 +3,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 @MainActor
 class NowPlayingViewModel: ObservableObject {
@@ -22,8 +23,17 @@ class NowPlayingViewModel: ObservableObject {
     @Published var isLiked: Bool = false
     @Published var repeatMode: RepeatMode = .off
 
-    init(playerService: PlayerService) {
+    // Miniplayer menu support
+    @Published var selectedPlayer: Player?
+    @Published var availablePlayers: [Player] = []
+
+    // Callback to notify parent when player selection changes
+    var onPlayerSelectionChange: ((Player) -> Void)?
+
+    init(playerService: PlayerService, selectedPlayer: Player? = nil, availablePlayers: [Player] = []) {
         self.playerService = playerService
+        self.selectedPlayer = selectedPlayer
+        self.availablePlayers = availablePlayers
         setupBindings()
     }
 
@@ -93,6 +103,16 @@ class NowPlayingViewModel: ObservableObject {
         }
         // TODO: Call Music Assistant API
         print("Repeat mode: \(repeatMode)")
+    }
+
+    func handlePlayerSelection(_ player: Player) {
+        selectedPlayer = player
+        playerService.selectedPlayer = player
+        onPlayerSelectionChange?(player)
+
+        Task {
+            await playerService.fetchPlayerState(for: player.id)
+        }
     }
 
     enum RepeatMode {

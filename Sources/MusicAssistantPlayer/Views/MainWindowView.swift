@@ -50,7 +50,17 @@ struct MainWindowView: View {
 
                 // Now Playing (center hero)
                 NowPlayingView(
-                    viewModel: NowPlayingViewModel(playerService: playerService)
+                    viewModel: {
+                        let vm = NowPlayingViewModel(
+                            playerService: playerService,
+                            selectedPlayer: selectedPlayer,
+                            availablePlayers: availablePlayers
+                        )
+                        vm.onPlayerSelectionChange = { [self] player in
+                            self.selectedPlayer = player
+                        }
+                        return vm
+                    }()
                 )
                 .frame(maxWidth: .infinity)
 
