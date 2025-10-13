@@ -103,17 +103,20 @@ enum EventParser {
         }
 
         return items.compactMap { item in
-            let title = item["title"] as? String ?? "Unknown Track"
-            let artist = item["artist"] as? String ?? "Unknown Artist"
-            let album = item["album"] as? String ?? "Unknown Album"
-            let duration = parseDuration(from: item["duration"])
+            // Queue items have track data nested under "media_item" or directly on the item
+            let mediaItem = item["media_item"] as? [String: Any] ?? item["media"] as? [String: Any] ?? item
+
+            let title = mediaItem["title"] as? String ?? "Unknown Track"
+            let artist = mediaItem["artist"] as? String ?? "Unknown Artist"
+            let album = mediaItem["album"] as? String ?? "Unknown Album"
+            let duration = parseDuration(from: mediaItem["duration"])
 
             var artworkURL: URL?
-            if let imageURLString = item["image_url"] as? String {
+            if let imageURLString = mediaItem["image_url"] as? String {
                 artworkURL = URL(string: imageURLString)
             }
 
-            let id = (item["uri"] as? String) ?? UUID().uuidString
+            let id = (mediaItem["uri"] as? String) ?? (item["queue_item_id"] as? String) ?? UUID().uuidString
 
             return Track(
                 id: id,

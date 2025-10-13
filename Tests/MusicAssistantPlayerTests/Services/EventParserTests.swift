@@ -152,6 +152,48 @@ final class EventParserTests: XCTestCase {
         XCTAssertNil(track?.artworkURL, "Should be nil for invalid URL strings")
     }
 
+    func testParseQueueItemsWithNestedMediaItem() {
+        let queueData: [String: AnyCodable] = [
+            "items": AnyCodable([
+                [
+                    "queue_item_id": "queue-1",
+                    "media_item": [
+                        "title": "Test Track 1",
+                        "artist": "Test Artist 1",
+                        "album": "Test Album 1",
+                        "duration": 180,
+                        "uri": "test:uri:1",
+                        "image_url": "https://example.com/art1.jpg"
+                    ]
+                ],
+                [
+                    "queue_item_id": "queue-2",
+                    "media_item": [
+                        "title": "Test Track 2",
+                        "artist": "Test Artist 2",
+                        "album": "Test Album 2",
+                        "duration": 240,
+                        "uri": "test:uri:2"
+                    ]
+                ]
+            ] as [[String: Any]])
+        ]
+
+        let queueItems = EventParser.parseQueueItems(from: queueData)
+        XCTAssertEqual(queueItems.count, 2, "Should parse 2 queue items")
+
+        XCTAssertEqual(queueItems[0].title, "Test Track 1")
+        XCTAssertEqual(queueItems[0].artist, "Test Artist 1")
+        XCTAssertEqual(queueItems[0].album, "Test Album 1")
+        XCTAssertEqual(queueItems[0].duration, 180.0)
+        XCTAssertEqual(queueItems[0].artworkURL?.absoluteString, "https://example.com/art1.jpg")
+
+        XCTAssertEqual(queueItems[1].title, "Test Track 2")
+        XCTAssertEqual(queueItems[1].artist, "Test Artist 2")
+        XCTAssertEqual(queueItems[1].duration, 240.0)
+        XCTAssertNil(queueItems[1].artworkURL, "Should be nil when image_url is missing")
+    }
+
     func testParseQueueItemsWithEmptyArray() {
         let emptyQueueData: [String: AnyCodable] = [
             "items": AnyCodable([])
