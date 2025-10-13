@@ -43,7 +43,7 @@ struct QueueView: View {
                         .foregroundColor(.white)
                     Spacer()
                     Button(action: {
-                        viewModel.errorMessage = nil
+                        viewModel.clearError()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.white.opacity(0.5))

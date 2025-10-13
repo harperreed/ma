@@ -23,15 +23,45 @@ struct LibraryBrowseView: View {
             Divider()
                 .background(Color.white.opacity(0.1))
 
+            // Error banner - dismissable, non-blocking
+            if let error = viewModel.errorMessage, !viewModel.isLoading {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(error)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Button(action: {
+                        viewModel.clearError()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                    Button("Retry", action: {
+                        viewModel.clearError()
+                        Task { await viewModel.loadContent() }
+                    })
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(6)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.2))
+            }
+
             // Content area
             ScrollView {
-                if viewModel.isLoading {
+                if viewModel.isLoading && viewModel.artists.isEmpty && viewModel.albums.isEmpty && viewModel.tracks.isEmpty && viewModel.playlists.isEmpty {
+                    // Only show full-screen loading on initial load
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = viewModel.errorMessage {
-                    ErrorView(message: error) {
-                        Task { await viewModel.loadContent() }
-                    }
                 } else {
                     contentView
                 }
