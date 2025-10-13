@@ -104,14 +104,6 @@ struct RoonStyleMainWindowView: View {
                             .background(Color.white.opacity(0.1))
 
                         VStack(spacing: 12) {
-                            // Players Card
-                            PlayersCard(
-                                players: availablePlayers,
-                                selectedPlayer: $selectedPlayer,
-                                onPlayerSelection: handlePlayerSelection
-                            )
-                            .frame(maxHeight: 300)
-
                             // Queue Card
                             VStack(alignment: .leading, spacing: 0) {
                                 HStack {
@@ -138,6 +130,14 @@ struct RoonStyleMainWindowView: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.white.opacity(0.1), lineWidth: 1)
                             )
+
+                            // Players Card
+                            PlayersCard(
+                                players: availablePlayers,
+                                selectedPlayer: $selectedPlayer,
+                                onPlayerSelection: handlePlayerSelection
+                            )
+                            .frame(maxHeight: 300)
                         }
                         .padding(12)
                         .frame(width: LayoutConstants.queueWidth)
