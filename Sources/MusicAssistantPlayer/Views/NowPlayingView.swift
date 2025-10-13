@@ -8,12 +8,8 @@ struct NowPlayingView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Blurred background
-                BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
-
-                // Content
-                VStack(spacing: responsiveSpacing(for: geometry.size)) {
+            // Content
+            VStack(spacing: responsiveSpacing(for: geometry.size)) {
                     Spacer()
 
                     // Album art
@@ -74,22 +70,27 @@ struct NowPlayingView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // Show menu button in miniplayer mode (< 700px width)
-                if geometry.size.width < 700 {
-                    MiniPlayerMenuButton(
-                        selectedPlayer: viewModel.selectedPlayer,
-                        availablePlayers: viewModel.availablePlayers,
-                        onPlayerSelect: { player in
-                            viewModel.handlePlayerSelection(player)
-                        },
-                        onShowQueue: {
-                            // TODO: Implement queue popover in next task
-                            print("Show queue requested")
+                .background(
+                    BlurredArtworkBackground(artworkURL: viewModel.artworkURL)
+                )
+                .overlay(
+                    // Show menu button in miniplayer mode (< 700px width)
+                    Group {
+                        if geometry.size.width < 700 {
+                            MiniPlayerMenuButton(
+                                selectedPlayer: viewModel.selectedPlayer,
+                                availablePlayers: viewModel.availablePlayers,
+                                onPlayerSelect: { player in
+                                    viewModel.handlePlayerSelection(player)
+                                },
+                                onShowQueue: {
+                                    // TODO: Implement queue popover in next task
+                                    print("Show queue requested")
+                                }
+                            )
                         }
-                    )
-                }
-            }
+                    }
+                )
         }
     }
 
