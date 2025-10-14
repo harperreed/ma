@@ -106,7 +106,7 @@ jobs:
             1. Download `MusicAssistantPlayer-*.dmg`
             2. Open the DMG file
             3. Drag Music Assistant Player to Applications folder
-            4. On first run, right-click the app and select "Open" (unsigned app warning)
+            4. Launch the app normally
 
             ## Requirements
 
@@ -115,6 +115,6 @@ jobs:
 
             ---
 
-            **Note:** This build is unsigned. Future releases will include code signing and notarization.
+            **Note:** This build is code signed with Developer ID. Notarization will be added in a future release.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
