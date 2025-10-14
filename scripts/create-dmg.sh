@@ -15,49 +15,20 @@ BACKGROUND_IMAGE="dmg-resources/background.png"
 BUILD_DIR="build/Release"
 DMG_DIR="dmg-staging"
 
-echo "🔨 Building app..."
-# Build with swift build for release
-swift build -c release
+# Use the pre-built and signed app from xcodebuild
+echo "📦 Using pre-built signed app..."
+BUILT_APP="build/Build/Products/Release/${APP_BUNDLE}"
 
-# Check if binary was created
-if [ ! -f ".build/release/MusicAssistantPlayer" ]; then
-    echo "❌ Failed to build binary"
+# Verify the signed app exists
+if [ ! -d "$BUILT_APP" ]; then
+    echo "❌ Pre-built app not found at: $BUILT_APP"
+    echo "Expected path: build/Build/Products/Release/${APP_BUNDLE}"
     exit 1
 fi
 
-# Create .app bundle structure
-echo "📦 Creating .app bundle..."
-rm -rf "build/${APP_BUNDLE}"
-mkdir -p "build/${APP_BUNDLE}/Contents/MacOS"
-mkdir -p "build/${APP_BUNDLE}/Contents/Resources"
-
-# Copy binary
-cp ".build/release/MusicAssistantPlayer" "build/${APP_BUNDLE}/Contents/MacOS/MusicAssistantPlayer"
-
-# Copy Info.plist
-if [ -f "Resources/Info.plist" ]; then
-    cp "Resources/Info.plist" "build/${APP_BUNDLE}/Contents/Info.plist"
-else
-    echo "⚠️  Warning: No Info.plist found"
-fi
-
-# Copy icon if it exists
-if [ -f "Resources/AppIcon.icns" ]; then
-    cp "Resources/AppIcon.icns" "build/${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
-fi
-
-# Make binary executable
-chmod +x "build/${APP_BUNDLE}/Contents/MacOS/MusicAssistantPlayer"
-
-# Remove quarantine attributes
-echo "🔓 Removing quarantine attributes..."
-/usr/bin/xattr -cr "build/${APP_BUNDLE}" 2>/dev/null || true
-
-# Ad-hoc sign the app (no certificate needed, just makes macOS happy)
-echo "✍️  Ad-hoc signing app..."
-codesign --force --deep --sign - "build/${APP_BUNDLE}"
-
-BUILT_APP="build/${APP_BUNDLE}"
+# Verify code signature
+echo "🔍 Verifying code signature..."
+codesign --verify --deep --strict --verbose=2 "$BUILT_APP"
 
 echo "✅ Built app at: $BUILT_APP"
 

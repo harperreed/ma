@@ -38,6 +38,7 @@ targets:
         ICON_FILE: AppIcon.icns
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        OTHER_CODE_SIGN_FLAGS: "--timestamp"
         COMBINE_HIDPI_IMAGES: YES
 
   MusicAssistantPlayerTests:

@@ -78,15 +78,45 @@ jobs:
           # Write API key to temporary file
           echo "$API_KEY_BASE64" | base64 --decode > AuthKey.p8
 
-          # Submit for notarization with API key
-          xcrun notarytool submit "$DMG_FILE" \
+          # Submit for notarization with API key and capture submission ID
+          SUBMISSION_OUTPUT=$(xcrun notarytool submit "$DMG_FILE" \
             --key AuthKey.p8 \
             --key-id "$API_KEY_ID" \
             --issuer "$API_ISSUER_ID" \
-            --wait
+            --wait 2>&1)
+
+          echo "$SUBMISSION_OUTPUT"
+
+          # Extract submission ID for potential log retrieval
+          SUBMISSION_ID=$(echo "$SUBMISSION_OUTPUT" | grep -E 'id: [a-f0-9-]+' | head -1 | awk '{print $2}')
+          echo "SUBMISSION_ID=$SUBMISSION_ID" >> $GITHUB_ENV
 
           # Staple the notarization ticket
           xcrun stapler staple "$DMG_FILE"
+
+          # Clean up API key
+          rm AuthKey.p8
+
+      - name: Retrieve notarization log on failure
+        if: failure()
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          # Recreate API key file
+          echo "$API_KEY_BASE64" | base64 --decode > AuthKey.p8
+
+          # Retrieve and display the rejection log
+          if [ -n "${{ env.SUBMISSION_ID }}" ]; then
+            echo "Retrieving notarization log for submission: ${{ env.SUBMISSION_ID }}"
+            xcrun notarytool log "${{ env.SUBMISSION_ID }}" \
+              --key AuthKey.p8 \
+              --key-id "$API_KEY_ID" \
+              --issuer "$API_ISSUER_ID"
+          else
+            echo "No submission ID found - cannot retrieve log"
+          fi
 
           # Clean up API key
           rm AuthKey.p8
