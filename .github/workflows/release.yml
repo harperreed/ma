@@ -120,6 +120,6 @@ jobs:
 
             ---
 
-            **Note:** This build is code signed with Developer ID. Notarization will be added in a future release.
+            **Note:** This build is code signed and notarized with Developer ID.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
