@@ -67,24 +67,29 @@ jobs:
       - name: Create DMG
         run: ./scripts/create-dmg.sh
 
-      # Notarization (commented out - uncomment when ready)
-      # - name: Notarize DMG
-      #   env:
-      #     APPLE_ID: ${{ secrets.APPLE_ID }}
-      #     APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-      #     TEAM_ID: ${{ secrets.TEAM_ID }}
-      #   run: |
-      #     DMG_FILE=$(ls MusicAssistantPlayer-*.dmg)
-      #
-      #     # Submit for notarization
-      #     xcrun notarytool submit "$DMG_FILE" \
-      #       --apple-id "$APPLE_ID" \
-      #       --password "$APPLE_ID_PASSWORD" \
-      #       --team-id "$TEAM_ID" \
-      #       --wait
-      #
-      #     # Staple the notarization ticket
-      #     xcrun stapler staple "$DMG_FILE"
+      - name: Notarize DMG
+        env:
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          DMG_FILE=$(ls MusicAssistantPlayer-*.dmg)
+
+          # Write API key to temporary file
+          echo "$API_KEY_BASE64" | base64 --decode > AuthKey.p8
+
+          # Submit for notarization with API key
+          xcrun notarytool submit "$DMG_FILE" \
+            --key AuthKey.p8 \
+            --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" \
+            --wait
+
+          # Staple the notarization ticket
+          xcrun stapler staple "$DMG_FILE"
+
+          # Clean up API key
+          rm AuthKey.p8
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
