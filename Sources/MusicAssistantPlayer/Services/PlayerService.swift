@@ -24,7 +24,7 @@ class PlayerService: ObservableObject {
     @Published var isFavorite: Bool = false
 
     private let client: MusicAssistantClient?
-    private var cancellables = Set<AnyCancellable>()
+    internal var cancellables = Set<AnyCancellable>()
     internal var eventTask: Task<Void, Never>?
     private var connectionMonitorTask: Task<Void, Never>?
     private var progressTask: Task<Void, Never>?
@@ -34,6 +34,7 @@ class PlayerService: ObservableObject {
         self.client = client
         subscribeToPlayerEvents()
         monitorConnection()
+        setupNowPlayingIntegration()
     }
 
     deinit {
