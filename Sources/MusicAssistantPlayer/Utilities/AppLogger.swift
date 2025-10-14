@@ -12,6 +12,7 @@ enum AppLogger {
     static let ui = Logger(subsystem: subsystem, category: "ui")
     static let cache = Logger(subsystem: subsystem, category: "cache")
     static let errors = Logger(subsystem: subsystem, category: "errors")
+    static let intents = Logger(subsystem: subsystem, category: "intents")
 }
 
 // MARK: - Convenience Extensions
