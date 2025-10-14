@@ -112,7 +112,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: MusicAssistantPlayer-*.dmg
-          draft: true
+          draft: false
           generate_release_notes: true
           body: |
             ## Installation
