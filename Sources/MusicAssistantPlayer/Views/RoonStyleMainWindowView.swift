@@ -49,6 +49,12 @@ struct RoonStyleMainWindowView: View {
         let librarySvc = LibraryService(client: client)
         let imageCacheSvc = ImageCacheService()
 
+        // Wire PlayerService to IntentHelper for Siri/Shortcuts integration
+        Task { @MainActor in
+            IntentHelper.shared.playerService = playerSvc
+            AppLogger.intents.info("PlayerService wired to IntentHelper in RoonStyleMainWindowView")
+        }
+
         // Initialize StateObjects
         _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)

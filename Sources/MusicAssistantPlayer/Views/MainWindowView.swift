@@ -48,6 +48,12 @@ struct MainWindowView: View {
         let queueSvc = QueueService(client: client)
         let imageCacheSvc = ImageCacheService()
 
+        // Wire PlayerService to IntentHelper for Siri/Shortcuts integration
+        Task { @MainActor in
+            IntentHelper.shared.playerService = playerSvc
+            AppLogger.intents.info("PlayerService wired to IntentHelper in MainWindowView")
+        }
+
         // Initialize StateObjects
         _playerService = StateObject(wrappedValue: playerSvc)
         _queueService = StateObject(wrappedValue: queueSvc)
