@@ -28,54 +28,40 @@ jobs:
       - name: Run tests
         run: swift test
 
-      # Code signing (commented out - uncomment when ready)
-      # - name: Import Code Signing Certificate
-      #   env:
-      #     P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-      #     CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
-      #   run: |
-      #     # Create temporary keychain
-      #     KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-      #     KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-      #
-      #     security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-      #     security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-      #     security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-      #
-      #     # Import certificate
-      #     echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
-      #     security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$P12_PASSWORD" -T /usr/bin/codesign
-      #     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-      #
-      #     # Set as default keychain
-      #     security list-keychains -d user -s "$KEYCHAIN_PATH"
-      #     rm certificate.p12
+      - name: Import Code Signing Certificate
+        env:
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-      # - name: Build and sign app
-      #   env:
-      #     DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-      #     CODE_SIGN_IDENTITY: ${{ secrets.CODE_SIGN_IDENTITY }}
-      #   run: |
-      #     xcodebuild -project MusicAssistantPlayer.xcodeproj \
-      #       -scheme MusicAssistantPlayer \
-      #       -configuration Release \
-      #       -derivedDataPath build \
-      #       CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
-      #       DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
-      #       CODE_SIGN_STYLE=Manual \
-      #       clean build
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-      # For now, build without signing
-      - name: Build app (unsigned)
+          # Import certificate
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Set as default keychain
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          rm certificate.p12
+
+      - name: Build and sign app
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
           xcodebuild -project MusicAssistantPlayer.xcodeproj \
             -scheme MusicAssistantPlayer \
             -configuration Release \
             -derivedDataPath build \
             -onlyUsePackageVersionsFromResolvedFile \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
             clean build
 
       - name: Create DMG
