@@ -3,6 +3,7 @@
 
 import SwiftUI
 import MusicAssistantKit
+import AppIntents
 
 @main
 struct MusicAssistantPlayerApp: App {
@@ -69,5 +70,59 @@ struct MusicAssistantPlayerApp: App {
                 }
             }
         }
+    }
+}
+
+struct MusicAssistantAppShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: PlayIntent(),
+            phrases: [
+                "Play music in \(.applicationName)",
+                "Resume music in \(.applicationName)"
+            ],
+            shortTitle: "Play",
+            systemImageName: "play.fill"
+        )
+
+        AppShortcut(
+            intent: PauseIntent(),
+            phrases: [
+                "Pause music in \(.applicationName)",
+                "Pause \(.applicationName)"
+            ],
+            shortTitle: "Pause",
+            systemImageName: "pause.fill"
+        )
+
+        AppShortcut(
+            intent: StopIntent(),
+            phrases: [
+                "Stop music in \(.applicationName)",
+                "Stop \(.applicationName)"
+            ],
+            shortTitle: "Stop",
+            systemImageName: "stop.fill"
+        )
+
+        AppShortcut(
+            intent: NextTrackIntent(),
+            phrases: [
+                "Next track in \(.applicationName)",
+                "Skip song in \(.applicationName)"
+            ],
+            shortTitle: "Next",
+            systemImageName: "forward.fill"
+        )
+
+        AppShortcut(
+            intent: PreviousTrackIntent(),
+            phrases: [
+                "Previous track in \(.applicationName)",
+                "Go back in \(.applicationName)"
+            ],
+            shortTitle: "Previous",
+            systemImageName: "backward.fill"
+        )
     }
 }
