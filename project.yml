@@ -9,7 +9,7 @@ options:
 packages:
   MusicAssistantKit:
     url: https://github.com/harperreed/MusicAssistantKit.git
-    branch: main
+    from: 0.0.4
 
 targets:
   MusicAssistantPlayer:
