@@ -7,6 +7,30 @@ import MusicAssistantKit
 
 final class EventParserTests: XCTestCase {
     func testParseTrackFromPlayerEvent() {
+        // Test with "name" field and "artists" array (actual Music Assistant API format)
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "name": "Bohemian Rhapsody",
+                "artists": [
+                    ["name": "Queen"]
+                ],
+                "album": ["name": "A Night at the Opera"],
+                "duration": 354,
+                "image_url": "https://example.com/album-art.jpg"
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+
+        XCTAssertEqual(track?.title, "Bohemian Rhapsody")
+        XCTAssertEqual(track?.artist, "Queen")
+        XCTAssertEqual(track?.album, "A Night at the Opera")
+        XCTAssertEqual(track?.duration, 354.0)
+        XCTAssertEqual(track?.artworkURL?.absoluteString, "https://example.com/album-art.jpg")
+    }
+
+    func testParseTrackWithTitleField() {
+        // Test backward compatibility with "title" and "artist" fields
         let eventData: [String: AnyCodable] = [
             "current_media": AnyCodable([
                 "title": "Bohemian Rhapsody",
@@ -24,6 +48,28 @@ final class EventParserTests: XCTestCase {
         XCTAssertEqual(track?.album, "A Night at the Opera")
         XCTAssertEqual(track?.duration, 354.0)
         XCTAssertEqual(track?.artworkURL?.absoluteString, "https://example.com/album-art.jpg")
+    }
+
+    func testParseTrackWithMultipleArtists() {
+        // Test with multiple artists
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "name": "Under Pressure",
+                "artists": [
+                    ["name": "Queen"],
+                    ["name": "David Bowie"]
+                ],
+                "album": ["name": "Hot Space"],
+                "duration": 248
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+
+        XCTAssertEqual(track?.title, "Under Pressure")
+        XCTAssertEqual(track?.artist, "Queen, David Bowie")
+        XCTAssertEqual(track?.album, "Hot Space")
+        XCTAssertEqual(track?.duration, 248.0)
     }
 
     func testParsePlaybackState() {
@@ -153,14 +199,17 @@ final class EventParserTests: XCTestCase {
     }
 
     func testParseQueueItemsWithNestedMediaItem() {
+        // Test with "name" field and "artists" array (actual Music Assistant API format)
         let queueData: [String: AnyCodable] = [
             "items": AnyCodable([
                 [
                     "queue_item_id": "queue-1",
                     "media_item": [
-                        "title": "Test Track 1",
-                        "artist": "Test Artist 1",
-                        "album": "Test Album 1",
+                        "name": "Test Track 1",
+                        "artists": [
+                            ["name": "Test Artist 1"]
+                        ],
+                        "album": ["name": "Test Album 1"],
                         "duration": 180,
                         "uri": "test:uri:1",
                         "image_url": "https://example.com/art1.jpg"
@@ -169,9 +218,11 @@ final class EventParserTests: XCTestCase {
                 [
                     "queue_item_id": "queue-2",
                     "media_item": [
-                        "title": "Test Track 2",
-                        "artist": "Test Artist 2",
-                        "album": "Test Album 2",
+                        "name": "Test Track 2",
+                        "artists": [
+                            ["name": "Test Artist 2"]
+                        ],
+                        "album": ["name": "Test Album 2"],
                         "duration": 240,
                         "uri": "test:uri:2"
                     ]
@@ -192,6 +243,29 @@ final class EventParserTests: XCTestCase {
         XCTAssertEqual(queueItems[1].artist, "Test Artist 2")
         XCTAssertEqual(queueItems[1].duration, 240.0)
         XCTAssertNil(queueItems[1].artworkURL, "Should be nil when image_url is missing")
+    }
+
+    func testParseQueueItemsWithTitleField() {
+        // Test backward compatibility with "title" field
+        let queueData: [String: AnyCodable] = [
+            "items": AnyCodable([
+                [
+                    "queue_item_id": "queue-1",
+                    "media_item": [
+                        "title": "Test Track 1",
+                        "artist": "Test Artist 1",
+                        "album": "Test Album 1",
+                        "duration": 180,
+                        "uri": "test:uri:1"
+                    ]
+                ]
+            ] as [[String: Any]])
+        ]
+
+        let queueItems = EventParser.parseQueueItems(from: queueData)
+        XCTAssertEqual(queueItems.count, 1, "Should parse 1 queue item")
+        XCTAssertEqual(queueItems[0].title, "Test Track 1")
+        XCTAssertEqual(queueItems[0].artist, "Test Artist 1")
     }
 
     func testParseQueueItemsWithEmptyArray() {

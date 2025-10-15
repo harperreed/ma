@@ -32,9 +32,31 @@ enum EventParser {
             return nil
         }
 
-        let title = currentMedia["title"] as? String ?? "Unknown Track"
-        let artist = currentMedia["artist"] as? String ?? "Unknown Artist"
-        let album = currentMedia["album"] as? String ?? "Unknown Album"
+        // Music Assistant API uses "name" for track title, not "title"
+        let title = currentMedia["name"] as? String ?? currentMedia["title"] as? String ?? "Unknown Track"
+
+        // Music Assistant API uses "artists" (plural array) not "artist" (singular string)
+        let artist: String
+        if let artistsArray = currentMedia["artists"] as? [[String: Any]], !artistsArray.isEmpty {
+            // Extract artist names from array of artist objects
+            let artistNames = artistsArray.compactMap { $0["name"] as? String }
+            artist = artistNames.joined(separator: ", ")
+        } else if let artistString = currentMedia["artist"] as? String {
+            // Fallback to singular "artist" if present
+            artist = artistString
+        } else {
+            artist = "Unknown Artist"
+        }
+
+        let album: String
+        if let albumDict = currentMedia["album"] as? [String: Any], let albumName = albumDict["name"] as? String {
+            album = albumName
+        } else if let albumString = currentMedia["album"] as? String {
+            album = albumString
+        } else {
+            album = "Unknown Album"
+        }
+
         let duration = parseDuration(from: currentMedia["duration"])
 
         var artworkURL: URL?
@@ -146,9 +168,31 @@ enum EventParser {
             // Queue items have track data nested under "media_item" or directly on the item
             let mediaItem = item["media_item"] as? [String: Any] ?? item["media"] as? [String: Any] ?? item
 
-            let title = mediaItem["title"] as? String ?? "Unknown Track"
-            let artist = mediaItem["artist"] as? String ?? "Unknown Artist"
-            let album = mediaItem["album"] as? String ?? "Unknown Album"
+            // Music Assistant API uses "name" for track title, not "title"
+            let title = mediaItem["name"] as? String ?? mediaItem["title"] as? String ?? "Unknown Track"
+
+            // Music Assistant API uses "artists" (plural array) not "artist" (singular string)
+            let artist: String
+            if let artistsArray = mediaItem["artists"] as? [[String: Any]], !artistsArray.isEmpty {
+                // Extract artist names from array of artist objects
+                let artistNames = artistsArray.compactMap { $0["name"] as? String }
+                artist = artistNames.joined(separator: ", ")
+            } else if let artistString = mediaItem["artist"] as? String {
+                // Fallback to singular "artist" if present
+                artist = artistString
+            } else {
+                artist = "Unknown Artist"
+            }
+
+            let album: String
+            if let albumDict = mediaItem["album"] as? [String: Any], let albumName = albumDict["name"] as? String {
+                album = albumName
+            } else if let albumString = mediaItem["album"] as? String {
+                album = albumString
+            } else {
+                album = "Unknown Album"
+            }
+
             let duration = parseDuration(from: mediaItem["duration"])
 
             var artworkURL: URL?
