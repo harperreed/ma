@@ -72,6 +72,41 @@ final class EventParserTests: XCTestCase {
         XCTAssertEqual(track?.duration, 248.0)
     }
 
+    func testParseTrackWithEmptyArtistsArray() {
+        // Test with empty artists array - should fallback to Unknown Artist
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "name": "Test Track",
+                "artists": [],
+                "duration": 180
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+
+        XCTAssertEqual(track?.title, "Test Track")
+        XCTAssertEqual(track?.artist, "Unknown Artist")
+    }
+
+    func testParseTrackWithMalformedArtistsArray() {
+        // Test with artists array containing objects without "name" field
+        let eventData: [String: AnyCodable] = [
+            "current_media": AnyCodable([
+                "name": "Test Track",
+                "artists": [
+                    ["id": "123"],  // Missing "name" field
+                    ["id": "456"]   // Missing "name" field
+                ],
+                "duration": 180
+            ] as [String: Any])
+        ]
+
+        let track = EventParser.parseTrack(from: eventData)
+
+        XCTAssertEqual(track?.title, "Test Track")
+        XCTAssertEqual(track?.artist, "Unknown Artist", "Should default to Unknown Artist when no valid artist names found")
+    }
+
     func testParsePlaybackState() {
         let playingData: [String: AnyCodable] = ["state": AnyCodable("playing")]
         XCTAssertEqual(EventParser.parsePlaybackState(from: playingData), .playing)

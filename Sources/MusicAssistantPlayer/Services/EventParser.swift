@@ -40,7 +40,11 @@ enum EventParser {
         if let artistsArray = currentMedia["artists"] as? [[String: Any]], !artistsArray.isEmpty {
             // Extract artist names from array of artist objects
             let artistNames = artistsArray.compactMap { $0["name"] as? String }
-            artist = artistNames.joined(separator: ", ")
+            if !artistNames.isEmpty {
+                artist = artistNames.joined(separator: ", ")
+            } else {
+                artist = "Unknown Artist"
+            }
         } else if let artistString = currentMedia["artist"] as? String {
             // Fallback to singular "artist" if present
             artist = artistString
@@ -176,7 +180,11 @@ enum EventParser {
             if let artistsArray = mediaItem["artists"] as? [[String: Any]], !artistsArray.isEmpty {
                 // Extract artist names from array of artist objects
                 let artistNames = artistsArray.compactMap { $0["name"] as? String }
-                artist = artistNames.joined(separator: ", ")
+                if !artistNames.isEmpty {
+                    artist = artistNames.joined(separator: ", ")
+                } else {
+                    artist = "Unknown Artist"
+                }
             } else if let artistString = mediaItem["artist"] as? String {
                 // Fallback to singular "artist" if present
                 artist = artistString
