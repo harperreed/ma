@@ -18,6 +18,7 @@ extension PlayerService {
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.play()
+                // Errors are logged and captured in PlayerService.lastError by play()
             }
             return .success
         }
@@ -26,6 +27,7 @@ extension PlayerService {
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.pause()
+                // Errors are logged and captured in PlayerService.lastError by pause()
             }
             return .success
         }
@@ -34,6 +36,7 @@ extension PlayerService {
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipNext()
+                // Errors are logged and captured in PlayerService.lastError by skipNext()
             }
             return .success
         }
@@ -42,6 +45,7 @@ extension PlayerService {
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipPrevious()
+                // Errors are logged and captured in PlayerService.lastError by skipPrevious()
             }
             return .success
         }
