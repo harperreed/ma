@@ -14,7 +14,7 @@ extension PlayerService {
     private func setupRemoteCommandCenter() {
         let commandCenter = MPRemoteCommandCenter.shared()
 
-        commandCenter.playCommand.addTarget { [weak self] event in
+        commandCenter.playCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.play()
@@ -22,7 +22,7 @@ extension PlayerService {
             return .success
         }
 
-        commandCenter.pauseCommand.addTarget { [weak self] event in
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.pause()
@@ -30,7 +30,7 @@ extension PlayerService {
             return .success
         }
 
-        commandCenter.nextTrackCommand.addTarget { [weak self] event in
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipNext()
@@ -38,7 +38,7 @@ extension PlayerService {
             return .success
         }
 
-        commandCenter.previousTrackCommand.addTarget { [weak self] event in
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
             guard let self = self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipPrevious()
