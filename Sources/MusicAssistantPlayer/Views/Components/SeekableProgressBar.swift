@@ -9,6 +9,7 @@ struct SeekableProgressBar: View {
     let onSeek: (TimeInterval) -> Void
 
     @State private var isDragging = false
+    @State private var isHovering = false
     @State private var dragProgress: TimeInterval?
 
     private var displayProgress: TimeInterval {
@@ -29,8 +30,8 @@ struct SeekableProgressBar: View {
                         .fill(Color.white)
                         .frame(width: progressWidth(geometry: geometry), height: 4)
 
-                    // Scrubber handle (only visible when dragging or hovering)
-                    if isDragging {
+                    // Scrubber handle (visible when dragging or hovering)
+                    if isDragging || isHovering {
                         Circle()
                             .fill(Color.white)
                             .frame(width: 12, height: 12)
@@ -38,6 +39,9 @@ struct SeekableProgressBar: View {
                     }
                 }
                 .contentShape(Rectangle())
+                .onHover { hovering in
+                    isHovering = hovering
+                }
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
@@ -60,12 +64,12 @@ struct SeekableProgressBar: View {
             // Time labels
             HStack {
                 Text(formatTime(displayProgress))
-                    .font(.caption)
+                    .font(.system(size: 11))
                     .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
                 Spacer()
                 Text(formatTime(duration))
-                    .font(.caption)
+                    .font(.system(size: 11))
                     .foregroundColor(.white.opacity(0.7))
                     .monospacedDigit()
             }

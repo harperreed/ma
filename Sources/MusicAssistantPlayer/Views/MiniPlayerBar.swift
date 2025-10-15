@@ -130,36 +130,19 @@ struct MiniPlayerBar: View {
 
             Spacer()
 
-            // Right: Progress bar with time
-            VStack(spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(formatTime(nowPlayingViewModel.progress))
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.7))
-                        .monospacedDigit()
-
-                    ProgressView(value: nowPlayingViewModel.progress, total: nowPlayingViewModel.duration)
-                        .progressViewStyle(.linear)
-                        .frame(width: 200)
-                        .tint(.white)
-
-                    Text(formatTime(nowPlayingViewModel.duration))
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.7))
-                        .monospacedDigit()
+            // Right: Seekable progress bar
+            SeekableProgressBar(
+                progress: nowPlayingViewModel.progress,
+                duration: nowPlayingViewModel.duration,
+                onSeek: { time in
+                    nowPlayingViewModel.seek(to: time)
                 }
-            }
-            .frame(width: 300, alignment: .trailing)
+            )
+            .frame(width: 300)
         }
         .padding(.horizontal, 20)
         .frame(height: barHeight)
         .background(Color.black.opacity(0.9))
-    }
-
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
