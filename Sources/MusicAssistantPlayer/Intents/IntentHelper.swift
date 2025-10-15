@@ -13,4 +13,11 @@ class IntentHelper {
     private init() {
         AppLogger.intents.info("IntentHelper initialized")
     }
+
+    /// Wire PlayerService to IntentHelper for Siri/Shortcuts integration.
+    /// Must be called synchronously on the main actor during app startup before intents can be delivered.
+    func setup(playerService: PlayerService) {
+        self.playerService = playerService
+        AppLogger.intents.info("PlayerService wired to IntentHelper")
+    }
 }

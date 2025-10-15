@@ -50,9 +50,9 @@ struct RoonStyleMainWindowView: View {
         let imageCacheSvc = ImageCacheService()
 
         // Wire PlayerService to IntentHelper for Siri/Shortcuts integration
-        Task { @MainActor in
-            IntentHelper.shared.playerService = playerSvc
-            AppLogger.intents.info("PlayerService wired to IntentHelper in RoonStyleMainWindowView")
+        // SwiftUI view inits always run on main thread, safe to assume main actor isolation
+        MainActor.assumeIsolated {
+            IntentHelper.shared.setup(playerService: playerSvc)
         }
 
         // Initialize StateObjects
