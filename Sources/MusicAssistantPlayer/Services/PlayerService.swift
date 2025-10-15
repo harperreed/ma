@@ -6,29 +6,80 @@ import Combine
 import MusicAssistantKit
 import os.log
 
+/// Atomic state container for player properties to prevent race conditions
+struct PlayerState: Equatable {
+    var currentTrack: Track?
+    var playbackState: PlaybackState = .stopped
+    var progress: TimeInterval = 0.0
+    var volume: Double = 50.0
+    var isShuffled: Bool = false
+    var repeatMode: String = "off" // "off", "all", "one"
+    var isFavorite: Bool = false
+    var lastProgressUpdate: Date = Date() // Include timestamp for atomic updates
+
+    // Custom Equatable to exclude lastProgressUpdate from comparison
+    // This prevents excessive updates when only the timestamp changes
+    static func == (lhs: PlayerState, rhs: PlayerState) -> Bool {
+        return lhs.currentTrack?.id == rhs.currentTrack?.id &&
+               lhs.playbackState == rhs.playbackState &&
+               lhs.progress == rhs.progress &&
+               lhs.volume == rhs.volume &&
+               lhs.isShuffled == rhs.isShuffled &&
+               lhs.repeatMode == rhs.repeatMode &&
+               lhs.isFavorite == rhs.isFavorite
+    }
+}
+
 @MainActor
 class PlayerService: ObservableObject {
-    @Published var currentTrack: Track?
-    @Published var playbackState: PlaybackState = .stopped {
+    @Published private(set) var state = PlayerState() {
         didSet {
-            handlePlaybackStateChange(oldValue: oldValue, newValue: playbackState)
+            // Handle playback state changes when state updates
+            if oldValue.playbackState != state.playbackState {
+                handlePlaybackStateChange(oldValue: oldValue.playbackState, newValue: state.playbackState)
+            }
         }
     }
-    @Published var progress: TimeInterval = 0.0
-    @Published var volume: Double = 50.0
+
     @Published var selectedPlayer: Player?
     @Published var connectionState: ConnectionState = .disconnected
     @Published var lastError: PlayerError?
-    @Published var isShuffled: Bool = false
-    @Published var repeatMode: String = "off" // "off", "all", "one"
-    @Published var isFavorite: Bool = false
+
+    // Convenience accessors for backward compatibility
+    var currentTrack: Track? {
+        get { state.currentTrack }
+        set { state.currentTrack = newValue }
+    }
+    var playbackState: PlaybackState {
+        get { state.playbackState }
+        set { state.playbackState = newValue }
+    }
+    var progress: TimeInterval {
+        get { state.progress }
+        set { state.progress = newValue }
+    }
+    var volume: Double {
+        get { state.volume }
+        set { state.volume = newValue }
+    }
+    var isShuffled: Bool {
+        get { state.isShuffled }
+        set { state.isShuffled = newValue }
+    }
+    var repeatMode: String {
+        get { state.repeatMode }
+        set { state.repeatMode = newValue }
+    }
+    var isFavorite: Bool {
+        get { state.isFavorite }
+        set { state.isFavorite = newValue }
+    }
 
     private let client: MusicAssistantClient?
     internal var cancellables = Set<AnyCancellable>()
     internal var eventTask: Task<Void, Never>?
     private var connectionMonitorTask: Task<Void, Never>?
     private var progressTask: Task<Void, Never>?
-    private var lastProgressUpdate = Date()
 
     init(client: MusicAssistantClient? = nil) {
         self.client = client
@@ -60,17 +111,21 @@ class PlayerService: ObservableObject {
 
                 await MainActor.run { [weak self] in
                     guard let self = self,
-                          self.playbackState == .playing,
-                          let duration = self.currentTrack?.duration,
-                          self.progress < duration else {
+                          self.state.playbackState == .playing,
+                          let duration = self.state.currentTrack?.duration,
+                          self.state.progress < duration else {
                         return
                     }
 
                     // Increment progress by elapsed time
                     let now = Date()
-                    let elapsed = now.timeIntervalSince(self.lastProgressUpdate)
-                    self.progress += elapsed
-                    self.lastProgressUpdate = now
+                    let elapsed = now.timeIntervalSince(self.state.lastProgressUpdate)
+
+                    // Update state atomically - includes timestamp to prevent race conditions
+                    var newState = self.state
+                    newState.progress += elapsed
+                    newState.lastProgressUpdate = now
+                    self.state = newState
                 }
             }
         }
@@ -114,71 +169,121 @@ class PlayerService: ObservableObject {
         eventTask = Task { [weak self] in
             guard let client = self?.client else { return }
 
-            for await event in await client.events.playerUpdates.values {
-                guard let self = self else {
-                    AppLogger.player.warning("PlayerService deallocated, stopping event subscription")
-                    return
+            var retryDelay: Duration = .seconds(2)
+            let maxRetryDelay: Duration = .seconds(60)
+
+            // Retry loop with exponential backoff for resilience
+            while !Task.isCancelled {
+                // Reset retry delay at start of each attempt
+                let eventStream = await client.events.playerUpdates.values
+
+                // Ensure stream cleanup on exit/error
+                defer {
+                    AppLogger.network.debug("Player event stream iteration ended, cleanup complete")
                 }
 
+                do {
+                    for await event in eventStream {
+                        // Check if self is still alive
+                        guard let self = self else {
+                            AppLogger.player.warning("PlayerService deallocated, stopping event subscription")
+                            return
+                        }
+
+                        // Reset retry delay on successful event reception
+                        retryDelay = .seconds(2)
+
+                        // Process event on MainActor
+                        await MainActor.run { [weak self] in
+                            guard let self = self else { return }
+
+                            // Log ALL received events for debugging
+                            AppLogger.player.debug("Received player event for player: \(event.playerId)")
+
+                            // If no player selected yet, log and skip (but don't lose the event loop)
+                            guard let selectedPlayer = self.selectedPlayer else {
+                                AppLogger.player.debug("No player selected, skipping event for: \(event.playerId)")
+                                return
+                            }
+
+                            // If event is for different player, log and skip
+                            guard event.playerId == selectedPlayer.id else {
+                                AppLogger.player.debug("Event for different player (received: \(event.playerId), selected: \(selectedPlayer.id)), skipping")
+                                return
+                            }
+
+                            AppLogger.player.debug("Processing event for selected player: \(selectedPlayer.name)")
+
+                            // Parse all state updates atomically
+                            var newState = self.state
+
+                            // Parse track
+                            if let track = EventParser.parseTrack(from: event.data) {
+                                newState.currentTrack = track
+                                AppLogger.player.debug("Updated track: \(track.title)")
+                            }
+
+                            // Parse playback state
+                            let parsedPlaybackState = EventParser.parsePlaybackState(from: event.data)
+                            if parsedPlaybackState != newState.playbackState {
+                                AppLogger.player.debug("Playback state changed: \(newState.playbackState) -> \(parsedPlaybackState)")
+                                newState.playbackState = parsedPlaybackState
+                            }
+
+                            // Parse progress
+                            let newProgress = EventParser.parseProgress(from: event.data)
+                            AppLogger.player.debug("Progress update: \(newProgress)s")
+                            newState.progress = newProgress
+
+                            // Parse volume
+                            let newVolume = EventParser.parseVolume(from: event.data)
+                            if newVolume != newState.volume {
+                                AppLogger.player.debug("Volume update: \(newVolume)")
+                                newState.volume = newVolume
+                            }
+
+                            // Parse shuffle state
+                            let newShuffled = EventParser.parseShuffleState(from: event.data)
+                            if newShuffled != newState.isShuffled {
+                                AppLogger.player.debug("Shuffle update: \(newShuffled)")
+                                newState.isShuffled = newShuffled
+                            }
+
+                            // Parse repeat mode
+                            let newRepeatMode = EventParser.parseRepeatMode(from: event.data)
+                            if newRepeatMode != newState.repeatMode {
+                                AppLogger.player.debug("Repeat mode update: \(newRepeatMode)")
+                                newState.repeatMode = newRepeatMode
+                            }
+
+                            // Atomic state update - single notification to observers
+                            newState.lastProgressUpdate = Date()
+                            self.state = newState
+                        }
+                    }
+
+                    // If loop completes normally (stream ended), log and retry
+                    AppLogger.network.warning("Player event stream ended normally, will retry")
+                } catch {
+                    // Catch any unexpected errors from the stream
+                    AppLogger.network.error("Player event stream error: \(error.localizedDescription)")
+                }
+
+                // Update connection state to indicate error
                 await MainActor.run { [weak self] in
-                    guard let self = self else { return }
+                    self?.connectionState = .error("Event stream disconnected")
+                }
 
-                    // Log ALL received events for debugging
-                    AppLogger.player.debug("Received player event for player: \(event.playerId)")
+                // Don't retry if task is cancelled
+                guard !Task.isCancelled else { return }
 
-                    // If no player selected yet, log and skip (but don't lose the event loop)
-                    guard let selectedPlayer = self.selectedPlayer else {
-                        AppLogger.player.debug("No player selected, skipping event for: \(event.playerId)")
-                        return
-                    }
+                // Exponential backoff retry
+                AppLogger.network.info("Retrying player event subscription in \(retryDelay.components.seconds)s")
+                try? await Task.sleep(for: retryDelay)
 
-                    // If event is for different player, log and skip
-                    guard event.playerId == selectedPlayer.id else {
-                        AppLogger.player.debug("Event for different player (received: \(event.playerId), selected: \(selectedPlayer.id)), skipping")
-                        return
-                    }
-
-                    AppLogger.player.debug("Processing event for selected player: \(selectedPlayer.name)")
-
-                    // Parse track
-                    if let track = EventParser.parseTrack(from: event.data) {
-                        self.currentTrack = track
-                        AppLogger.player.debug("Updated track: \(track.title)")
-                    }
-
-                    // Parse playback state
-                    let newState = EventParser.parsePlaybackState(from: event.data)
-                    if newState != self.playbackState {
-                        AppLogger.player.debug("Playback state changed: \(self.playbackState) -> \(newState)")
-                        self.playbackState = newState
-                    }
-
-                    // Parse progress and update timestamp
-                    let newProgress = EventParser.parseProgress(from: event.data)
-                    AppLogger.player.debug("Progress update: \(newProgress)s")
-                    self.progress = newProgress
-                    self.lastProgressUpdate = Date()
-
-                    // Parse volume
-                    let newVolume = EventParser.parseVolume(from: event.data)
-                    if newVolume != self.volume {
-                        AppLogger.player.debug("Volume update: \(newVolume)")
-                        self.volume = newVolume
-                    }
-
-                    // Parse shuffle state
-                    let newShuffled = EventParser.parseShuffleState(from: event.data)
-                    if newShuffled != self.isShuffled {
-                        AppLogger.player.debug("Shuffle update: \(newShuffled)")
-                        self.isShuffled = newShuffled
-                    }
-
-                    // Parse repeat mode
-                    let newRepeatMode = EventParser.parseRepeatMode(from: event.data)
-                    if newRepeatMode != self.repeatMode {
-                        AppLogger.player.debug("Repeat mode update: \(newRepeatMode)")
-                        self.repeatMode = newRepeatMode
-                    }
+                // Increase delay for next retry, capped at max
+                if retryDelay < maxRetryDelay {
+                    retryDelay = retryDelay * 2
                 }
             }
         }
@@ -209,28 +314,34 @@ class PlayerService: ObservableObject {
                 // Convert to AnyCodable dictionary for EventParser
                 let anyCodableData = playerData.mapValues { AnyCodable($0) }
 
+                // Parse all state atomically
+                var newState = self.state
+
                 // Parse track
                 if let track = EventParser.parseTrack(from: anyCodableData) {
-                    currentTrack = track
+                    newState.currentTrack = track
                 } else {
-                    currentTrack = nil
+                    newState.currentTrack = nil
                 }
 
                 // Parse playback state
-                playbackState = EventParser.parsePlaybackState(from: anyCodableData)
+                newState.playbackState = EventParser.parsePlaybackState(from: anyCodableData)
 
-                // Parse progress and update timestamp for local tracking sync
-                progress = EventParser.parseProgress(from: anyCodableData)
-                lastProgressUpdate = Date()
+                // Parse progress
+                newState.progress = EventParser.parseProgress(from: anyCodableData)
 
                 // Parse volume
-                volume = EventParser.parseVolume(from: anyCodableData)
+                newState.volume = EventParser.parseVolume(from: anyCodableData)
 
                 // Parse shuffle state
-                isShuffled = EventParser.parseShuffleState(from: anyCodableData)
+                newState.isShuffled = EventParser.parseShuffleState(from: anyCodableData)
 
                 // Parse repeat mode
-                repeatMode = EventParser.parseRepeatMode(from: anyCodableData)
+                newState.repeatMode = EventParser.parseRepeatMode(from: anyCodableData)
+
+                // Atomic state update
+                newState.lastProgressUpdate = Date()
+                self.state = newState
             }
         } catch {
             AppLogger.errors.logError(error, context: "fetchPlayerState(for: \(playerId))")
@@ -339,8 +450,10 @@ class PlayerService: ObservableObject {
 
     func seek(to position: Double) async {
         // Optimistically update progress for immediate UI feedback (bidirectional sync)
-        progress = position
-        lastProgressUpdate = Date()
+        var newState = state
+        newState.progress = position
+        newState.lastProgressUpdate = Date()
+        state = newState
 
         do {
             guard let client = client else {
@@ -364,7 +477,9 @@ class PlayerService: ObservableObject {
 
     func setVolume(_ volume: Double) async {
         // Optimistically update volume for immediate UI feedback (bidirectional sync)
-        self.volume = volume
+        var newState = state
+        newState.volume = volume
+        state = newState
 
         do {
             guard let client = client else {
@@ -427,7 +542,9 @@ class PlayerService: ObservableObject {
 
     func setShuffle(enabled: Bool) async {
         // Optimistically update for immediate UI feedback
-        self.isShuffled = enabled
+        var newState = state
+        newState.isShuffled = enabled
+        state = newState
 
         do {
             guard let client = client else {
@@ -452,17 +569,26 @@ class PlayerService: ObservableObject {
             AppLogger.errors.logPlayerError(error, context: "setShuffle(\(enabled))")
             lastError = error
             // Rollback on failure
-            self.isShuffled = !enabled
+            var rollbackState = state
+            rollbackState.isShuffled = !enabled
+            state = rollbackState
         } catch {
             AppLogger.errors.logError(error, context: "setShuffle(\(enabled))")
             lastError = .commandFailed("setShuffle", reason: error.localizedDescription)
-            self.isShuffled = !enabled
+            var rollbackState = state
+            rollbackState.isShuffled = !enabled
+            state = rollbackState
         }
     }
 
     func setRepeat(mode: String) async {
+        // Store old mode for rollback
+        let oldMode = state.repeatMode
+
         // Optimistically update for immediate UI feedback
-        self.repeatMode = mode
+        var newState = state
+        newState.repeatMode = mode
+        state = newState
 
         do {
             guard let client = client else {
@@ -487,32 +613,38 @@ class PlayerService: ObservableObject {
             AppLogger.errors.logPlayerError(error, context: "setRepeat(\(mode))")
             lastError = error
             // Rollback on failure
-            self.repeatMode = mode == "off" ? "all" : "off"
+            var rollbackState = state
+            rollbackState.repeatMode = oldMode
+            state = rollbackState
         } catch {
             AppLogger.errors.logError(error, context: "setRepeat(\(mode))")
             lastError = .commandFailed("setRepeat", reason: error.localizedDescription)
-            self.repeatMode = mode == "off" ? "all" : "off"
+            var rollbackState = state
+            rollbackState.repeatMode = oldMode
+            state = rollbackState
         }
     }
 
     func toggleFavorite(trackId: String) async {
         // Optimistically toggle for immediate UI feedback
-        self.isFavorite.toggle()
-        let newState = self.isFavorite
+        var newState = state
+        newState.isFavorite.toggle()
+        let newFavoriteState = newState.isFavorite
+        state = newState
 
         do {
             guard let client = client else {
                 throw PlayerError.networkError("No client available")
             }
 
-            AppLogger.player.info("Toggling favorite for track: \(trackId) to: \(newState)")
+            AppLogger.player.info("Toggling favorite for track: \(trackId) to: \(newFavoriteState)")
 
             // Music Assistant API: music/tracks/favorite
             try await client.sendCommand(
                 command: "music/tracks/favorite",
                 args: [
                     "item_id": trackId,
-                    "favorite": newState
+                    "favorite": newFavoriteState
                 ]
             )
             lastError = nil
@@ -520,11 +652,15 @@ class PlayerService: ObservableObject {
             AppLogger.errors.logPlayerError(error, context: "toggleFavorite(\(trackId))")
             lastError = error
             // Rollback on failure
-            self.isFavorite = !newState
+            var rollbackState = state
+            rollbackState.isFavorite = !newFavoriteState
+            state = rollbackState
         } catch {
             AppLogger.errors.logError(error, context: "toggleFavorite(\(trackId))")
             lastError = .commandFailed("toggleFavorite", reason: error.localizedDescription)
-            self.isFavorite = !newState
+            var rollbackState = state
+            rollbackState.isFavorite = !newFavoriteState
+            state = rollbackState
         }
     }
 
@@ -545,12 +681,16 @@ class PlayerService: ObservableObject {
                let trackData = result.value as? [String: Any],
                let favorite = trackData["favorite"] as? Bool {
                 // Verify track hasn't changed before updating state
-                guard self.currentTrack?.id == trackId else { return }
-                self.isFavorite = favorite
+                guard self.state.currentTrack?.id == trackId else { return }
+                var newState = state
+                newState.isFavorite = favorite
+                state = newState
             } else {
                 // Verify track hasn't changed before updating state
-                guard self.currentTrack?.id == trackId else { return }
-                self.isFavorite = false
+                guard self.state.currentTrack?.id == trackId else { return }
+                var newState = state
+                newState.isFavorite = false
+                state = newState
             }
 
             lastError = nil

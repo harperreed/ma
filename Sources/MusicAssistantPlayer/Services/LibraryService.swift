@@ -89,6 +89,7 @@ class LibraryService: ObservableObject {
             if let result = result {
                 let parsedArtists = parseArtists(from: result)
 
+                // Since class is @MainActor, we're already on MainActor
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
                     self.artists = parsedArtists
@@ -102,7 +103,6 @@ class LibraryService: ObservableObject {
                 // Update pagination state
                 self.currentOffset = fetchOffset + parsedArtists.count
                 self.hasMoreItems = parsedArtists.count == fetchLimit
-
                 lastError = nil
             } else {
                 self.artists = []

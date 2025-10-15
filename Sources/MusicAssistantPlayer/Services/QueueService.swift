@@ -53,28 +53,70 @@ class QueueService: ObservableObject {
 
         // Subscribe to queue update events and store the task
         eventTask = Task { [weak self] in
-            guard let self = self else { return }
+            var retryDelay: Duration = .seconds(2)
+            let maxRetryDelay: Duration = .seconds(60)
 
-            for await event in await client.events.queueUpdates.values {
-                // Only process if this is our queue
-                guard await MainActor.run(body: { event.queueId == self.queueId }) else {
-                    return
+            // Retry loop with exponential backoff for resilience
+            while !Task.isCancelled {
+                let eventStream = await client.events.queueUpdates.values
+
+                // Ensure stream cleanup on exit/error
+                defer {
+                    AppLogger.network.debug("Queue event stream iteration ended, cleanup complete")
                 }
 
-                // Extract current index from the event
-                if let currentIndexWrapper = event.data["current_index"],
-                   let idx = currentIndexWrapper.value as? Int {
-                    await MainActor.run {
-                        self.currentIndex = idx
-                    }
-                }
-
-                // Queue events don't contain the full item data, just metadata
-                // We need to fetch the actual queue items
                 do {
-                    try await self.fetchQueue(for: event.queueId)
+                    for await event in eventStream {
+                        // Check if self is still alive
+                        guard let self = self else { return }
+
+                        // Reset retry delay on successful event reception
+                        retryDelay = .seconds(2)
+
+                        // Only process if this is our queue
+                        guard await MainActor.run(body: { event.queueId == self.queueId }) else {
+                            continue
+                        }
+
+                        // Extract current index from the event
+                        if let currentIndexWrapper = event.data["current_index"],
+                           let idx = currentIndexWrapper.value as? Int {
+                            await MainActor.run {
+                                self.currentIndex = idx
+                            }
+                        }
+
+                        // Queue events don't contain the full item data, just metadata
+                        // We need to fetch the actual queue items
+                        do {
+                            try await self.fetchQueue(for: event.queueId)
+                        } catch {
+                            AppLogger.errors.logError(error, context: "QueueService.queueUpdates")
+                        }
+                    }
+
+                    // If loop completes normally (stream ended), log and retry
+                    AppLogger.network.warning("Queue event stream ended normally, will retry")
                 } catch {
-                    AppLogger.errors.logError(error, context: "QueueService.queueUpdates")
+                    // Catch any unexpected errors from the stream
+                    AppLogger.network.error("Queue event stream error: \(error.localizedDescription)")
+                }
+
+                // Update error state
+                await MainActor.run { [weak self] in
+                    self?.lastError = .networkError("Event stream disconnected")
+                }
+
+                // Don't retry if task is cancelled
+                guard !Task.isCancelled else { return }
+
+                // Exponential backoff retry
+                AppLogger.network.info("Retrying queue event subscription in \(retryDelay.components.seconds)s")
+                try? await Task.sleep(for: retryDelay)
+
+                // Increase delay for next retry, capped at max
+                if retryDelay < maxRetryDelay {
+                    retryDelay = retryDelay * 2
                 }
             }
         }

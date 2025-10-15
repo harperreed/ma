@@ -16,3 +16,4 @@ dmg-staging/
 
 # Icon generation
 Resources/icon-sources/*.iconset/
+docs

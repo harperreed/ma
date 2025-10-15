@@ -54,23 +54,9 @@ extension PlayerService {
     }
 
     private func setupNowPlayingObservers() {
-        // Observe track changes
-        $currentTrack
-            .sink { [weak self] _ in
-                self?.updateNowPlayingInfo()
-            }
-            .store(in: &cancellables)
-
-        // Observe playback state changes
-        $playbackState
-            .sink { [weak self] _ in
-                self?.updateNowPlayingInfo()
-            }
-            .store(in: &cancellables)
-
-        // Observe progress changes (throttle to avoid excessive updates)
-        $progress
-            .throttle(for: .seconds(1), scheduler: RunLoop.main, latest: true)
+        // Observe the entire state - update NowPlaying when any relevant property changes
+        $state
+            .removeDuplicates() // Only update if state actually changed
             .sink { [weak self] _ in
                 self?.updateNowPlayingInfo()
             }

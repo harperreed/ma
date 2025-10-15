@@ -27,10 +27,14 @@ class QueueViewModel: ObservableObject {
             .assign(to: &$tracks)
 
         // Bind shuffle/repeat state from PlayerService
-        playerService?.$isShuffled
+        playerService?.$state
+            .map { $0.isShuffled }
+            .removeDuplicates()
             .assign(to: &$isShuffled)
 
-        playerService?.$repeatMode
+        playerService?.$state
+            .map { $0.repeatMode }
+            .removeDuplicates()
             .assign(to: &$repeatMode)
     }
 

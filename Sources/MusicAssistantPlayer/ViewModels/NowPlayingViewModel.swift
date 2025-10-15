@@ -45,7 +45,10 @@ class NowPlayingViewModel: ObservableObject {
     }
 
     private func setupBindings() {
-        playerService.$currentTrack
+        // Observe state changes for track info
+        playerService.$state
+            .map { $0.currentTrack }
+            .removeDuplicates(by: { $0?.id == $1?.id })
             .sink { [weak self] track in
                 self?.currentTrack = track
                 self?.trackTitle = track?.title ?? "No Track Playing"
@@ -65,13 +68,17 @@ class NowPlayingViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        playerService.$playbackState
-            .map { $0 == .playing }
+        // Observe playback state
+        playerService.$state
+            .map { $0.playbackState == .playing }
+            .removeDuplicates()
             .assign(to: &$isPlaying)
 
         // Note: progress is updated via seekSubject when user is scrubbing
         // Service updates progress during normal playback
-        playerService.$progress
+        playerService.$state
+            .map { $0.progress }
+            .removeDuplicates()
             .sink { [weak self] serviceProgress in
                 // Only update from service if we're not actively seeking
                 // This prevents service updates from fighting with optimistic UI updates
@@ -82,7 +89,9 @@ class NowPlayingViewModel: ObservableObject {
 
         // Note: volume is updated via volumeSubject when user is dragging slider
         // Service updates volume from external sources (e.g., hardware controls)
-        playerService.$volume
+        playerService.$state
+            .map { $0.volume }
+            .removeDuplicates()
             .sink { [weak self] serviceVolume in
                 // Update from service, but optimistic updates take precedence
                 guard let self = self, !self.isUserAdjustingVolume else { return }
@@ -90,10 +99,16 @@ class NowPlayingViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        playerService.$isShuffled
+        // Observe shuffle state
+        playerService.$state
+            .map { $0.isShuffled }
+            .removeDuplicates()
             .assign(to: &$isShuffled)
 
-        playerService.$repeatMode
+        // Observe repeat mode
+        playerService.$state
+            .map { $0.repeatMode }
+            .removeDuplicates()
             .map { mode -> RepeatMode in
                 switch mode {
                 case "all": return .all
@@ -103,7 +118,10 @@ class NowPlayingViewModel: ObservableObject {
             }
             .assign(to: &$repeatMode)
 
-        playerService.$isFavorite
+        // Observe favorite state
+        playerService.$state
+            .map { $0.isFavorite }
+            .removeDuplicates()
             .assign(to: &$isLiked)
     }
 
