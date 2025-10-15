@@ -10,6 +10,7 @@ class QueueService: ObservableObject {
     @Published var upcomingTracks: [Track] = []
     @Published var queueId: String?
     @Published var lastError: QueueError?
+    @Published var currentIndex: Int = 0  // Track which item is currently playing
 
     private let client: MusicAssistantClient?
     private var cancellables = Set<AnyCancellable>()
@@ -55,12 +56,25 @@ class QueueService: ObservableObject {
             guard let self = self else { return }
 
             for await event in await client.events.queueUpdates.values {
-                await MainActor.run {
-                    // Only process if this is our queue
-                    guard event.queueId == self.queueId else { return }
+                // Only process if this is our queue
+                guard await MainActor.run(body: { event.queueId == self.queueId }) else {
+                    return
+                }
 
-                    // Parse queue items
-                    self.upcomingTracks = EventParser.parseQueueItems(from: event.data)
+                // Extract current index from the event
+                if let currentIndexWrapper = event.data["current_index"],
+                   let idx = currentIndexWrapper.value as? Int {
+                    await MainActor.run {
+                        self.currentIndex = idx
+                    }
+                }
+
+                // Queue events don't contain the full item data, just metadata
+                // We need to fetch the actual queue items
+                do {
+                    try await self.fetchQueue(for: event.queueId)
+                } catch {
+                    AppLogger.errors.logError(error, context: "QueueService.queueUpdates")
                 }
             }
         }
@@ -69,20 +83,46 @@ class QueueService: ObservableObject {
     func fetchQueue(for playerId: String) async throws {
         guard let client = client else { return }
 
-        self.queueId = playerId
+        await MainActor.run {
+            self.queueId = playerId
+        }
 
         // Fetch queue items
         if let result = try await client.getQueueItems(queueId: playerId) {
             // The result could be in different formats, try both
             if let itemsDict = result.value as? [String: Any] {
-                // If it's already a dictionary with "items" key
+                // Extract current index if available
+                var currentIdx = 0
+                if let idx = itemsDict["current_index"] as? Int {
+                    currentIdx = idx
+                } else if let idx = itemsDict["current_item"] as? Int {
+                    currentIdx = idx
+                }
+
                 let anyCodableData = itemsDict.mapValues { AnyCodable($0) }
-                self.upcomingTracks = EventParser.parseQueueItems(from: anyCodableData)
+                let allTracks = EventParser.parseQueueItems(from: anyCodableData)
+
+                // Filter to show only upcoming tracks (after current index)
+                // Current track at index X means tracks 0..<X have played, X is playing, X+1...end are upcoming
+                let upcomingOnly = Array(allTracks.dropFirst(currentIdx + 1))
+
+                await MainActor.run {
+                    self.currentIndex = currentIdx
+                    self.upcomingTracks = upcomingOnly
+                }
             } else if let itemsArray = result.value as? [[String: Any]] {
-                // If it's directly an array of items
+                // If it's directly an array of items, use stored current_index for filtering
                 let queueData = ["items": itemsArray]
                 let anyCodableData = queueData.mapValues { AnyCodable($0) }
-                self.upcomingTracks = EventParser.parseQueueItems(from: anyCodableData)
+                let allTracks = EventParser.parseQueueItems(from: anyCodableData)
+
+                // Use stored currentIndex to filter
+                let currentIdx = await MainActor.run { self.currentIndex }
+                let upcomingOnly = Array(allTracks.dropFirst(currentIdx + 1))
+
+                await MainActor.run {
+                    self.upcomingTracks = upcomingOnly
+                }
             }
         }
     }

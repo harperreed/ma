@@ -168,7 +168,7 @@ enum EventParser {
             return []
         }
 
-        return items.compactMap { item in
+        return items.enumerated().compactMap { arrayIndex, item in
             // Queue items have track data nested under "media_item" or directly on the item
             let mediaItem = item["media_item"] as? [String: Any] ?? item["media"] as? [String: Any] ?? item
 
