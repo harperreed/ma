@@ -56,7 +56,7 @@ extension PlayerService {
     private func setupNowPlayingObservers() {
         // Observe track changes
         $currentTrack
-            .sink { [weak self] track in
+            .sink { [weak self] _ in
                 self?.updateNowPlayingInfo()
             }
             .store(in: &cancellables)
