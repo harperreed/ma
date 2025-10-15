@@ -4,21 +4,35 @@
 import Foundation
 import AppIntents
 
+// MARK: - Helper
+
+@MainActor
+private func executePlayerAction(
+    intentName: String,
+    action: @MainActor (PlayerService) async -> Void
+) async -> some IntentResult {
+    AppLogger.intents.info("\(intentName) triggered")
+
+    guard let playerService = IntentHelper.shared.playerService else {
+        AppLogger.intents.warning("\(intentName): No PlayerService available")
+        return .result()
+    }
+
+    await action(playerService)
+    return .result()
+}
+
+// MARK: - Intents
+
 struct PlayIntent: AppIntent {
     static let title: LocalizedStringResource = "Play Music"
     static let description = IntentDescription("Resume playback in Music Assistant Player")
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        AppLogger.intents.info("PlayIntent triggered")
-
-        guard let playerService = IntentHelper.shared.playerService else {
-            AppLogger.intents.warning("PlayIntent: No PlayerService available")
-            return .result()
+        await executePlayerAction(intentName: "PlayIntent") { playerService in
+            await playerService.play()
         }
-
-        await playerService.play()
-        return .result()
     }
 }
 
@@ -28,15 +42,9 @@ struct PauseIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        AppLogger.intents.info("PauseIntent triggered")
-
-        guard let playerService = IntentHelper.shared.playerService else {
-            AppLogger.intents.warning("PauseIntent: No PlayerService available")
-            return .result()
+        await executePlayerAction(intentName: "PauseIntent") { playerService in
+            await playerService.pause()
         }
-
-        await playerService.pause()
-        return .result()
     }
 }
 
@@ -46,15 +54,9 @@ struct StopIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        AppLogger.intents.info("StopIntent triggered")
-
-        guard let playerService = IntentHelper.shared.playerService else {
-            AppLogger.intents.warning("StopIntent: No PlayerService available")
-            return .result()
+        await executePlayerAction(intentName: "StopIntent") { playerService in
+            await playerService.stop()
         }
-
-        await playerService.stop()
-        return .result()
     }
 }
 
@@ -64,15 +66,9 @@ struct NextTrackIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        AppLogger.intents.info("NextTrackIntent triggered")
-
-        guard let playerService = IntentHelper.shared.playerService else {
-            AppLogger.intents.warning("NextTrackIntent: No PlayerService available")
-            return .result()
+        await executePlayerAction(intentName: "NextTrackIntent") { playerService in
+            await playerService.skipNext()
         }
-
-        await playerService.skipNext()
-        return .result()
     }
 }
 
@@ -82,14 +78,8 @@ struct PreviousTrackIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        AppLogger.intents.info("PreviousTrackIntent triggered")
-
-        guard let playerService = IntentHelper.shared.playerService else {
-            AppLogger.intents.warning("PreviousTrackIntent: No PlayerService available")
-            return .result()
+        await executePlayerAction(intentName: "PreviousTrackIntent") { playerService in
+            await playerService.skipPrevious()
         }
-
-        await playerService.skipPrevious()
-        return .result()
     }
 }
