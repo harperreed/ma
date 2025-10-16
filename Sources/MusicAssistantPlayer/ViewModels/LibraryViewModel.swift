@@ -14,13 +14,22 @@ class LibraryViewModel: ObservableObject {
     @Published var selectedSort: LibrarySortOption = .nameAsc
     @Published var selectedFilter: LibraryFilter = LibraryFilter()
 
-    private let libraryService: LibraryService
+    // Navigation state
+    @Published var selectedArtist: Artist? = nil
+    @Published var selectedAlbum: Album? = nil
+
+    let libraryService: LibraryService // Public for UI access to hydration progress
     private var cancellables = Set<AnyCancellable>()
     private var searchTask: Task<Void, Never>?
 
     init(libraryService: LibraryService) {
         self.libraryService = libraryService
         setupSearchDebouncing()
+
+        // Start background hydration (force refresh to get latest data with no limits)
+        Task {
+            await libraryService.hydrateLibraryInBackground(forceRefresh: true)
+        }
     }
 
     private func setupSearchDebouncing() {
@@ -78,7 +87,16 @@ class LibraryViewModel: ObservableObject {
         do {
             switch selectedCategory {
             case .artists:
-                try await libraryService.fetchArtists()
+                // Try to load from hydrated cache first, fallback to regular fetch
+                let cacheKey = "hydrated_library_artists"
+                if let cached: [Artist] = libraryService.cache.get(forKey: cacheKey) {
+                    print("📱 [LibraryViewModel] Loading artists from hydrated cache (\(cached.count) artists)")
+                    libraryService.artists = cached
+                } else {
+                    print("📱 [LibraryViewModel] Fetching artists (hydration still in progress)...")
+                    try await libraryService.fetchArtists()
+                    print("📱 [LibraryViewModel] Artists fetched: \(libraryService.artists.count)")
+                }
             case .albums:
                 try await libraryService.fetchAlbums(for: nil)
             case .tracks:
@@ -141,6 +159,47 @@ class LibraryViewModel: ObservableObject {
 
     var hasMoreItems: Bool {
         libraryService.hasMoreItems
+    }
+
+    // MARK: - Navigation Methods
+
+    func selectArtist(_ artist: Artist) async {
+        selectedArtist = artist
+        selectedAlbum = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            print("📱 [LibraryViewModel] Loading albums for artist: \(artist.name) (id: \(artist.id))")
+            try await libraryService.fetchAlbums(for: artist.id)
+            print("📱 [LibraryViewModel] Loaded \(libraryService.albums.count) albums (cached or fresh)")
+        } catch {
+            print("📱 [LibraryViewModel] Error loading albums: \(error.localizedDescription)")
+        }
+    }
+
+    func selectAlbum(_ album: Album) async {
+        selectedAlbum = album
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            print("📱 [LibraryViewModel] Loading tracks for album: \(album.title)")
+            try await libraryService.fetchTracks(for: album.id)
+            print("📱 [LibraryViewModel] Loaded \(libraryService.tracks.count) tracks")
+        } catch {
+            print("📱 [LibraryViewModel] Error loading tracks: \(error.localizedDescription)")
+        }
+    }
+
+    func goBack() {
+        if selectedAlbum != nil {
+            // Go back from album to artist
+            selectedAlbum = nil
+        } else if selectedArtist != nil {
+            // Go back from artist to artists list
+            selectedArtist = nil
+        }
     }
 
     // MARK: - Utility Methods

@@ -20,6 +20,22 @@ struct LibraryBrowseView: View {
             // Sort and Filter toolbar
             LibraryToolbar(viewModel: viewModel)
 
+            // Hydration progress bar
+            if let progress = viewModel.libraryService.hydrationProgress,
+               let status = viewModel.libraryService.hydrationStatus {
+                HStack(spacing: 12) {
+                    ProgressView(value: progress, total: 1.0)
+                        .progressViewStyle(.linear)
+                        .frame(maxWidth: 300)
+                    Text(status)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.blue.opacity(0.2))
+            }
+
             Divider()
                 .background(Color.white.opacity(0.1))
 
@@ -77,55 +93,113 @@ struct LibraryBrowseView: View {
     @ViewBuilder
     private var contentView: some View {
         VStack(spacing: 0) {
-            switch viewModel.selectedCategory {
-            case .artists:
-                ArtistsGridView(
-                    artists: viewModel.artists,
-                    onPlayNow: { onPlayNow($0.id, .artist) },
-                    onAddToQueue: { onAddToQueue($0.id, .artist) },
-                    onLoadMore: {
-                        Task {
-                            await viewModel.loadMore()
+            // Show navigation breadcrumbs and back button
+            if viewModel.selectedArtist != nil || viewModel.selectedAlbum != nil {
+                HStack {
+                    Button(action: {
+                        viewModel.goBack()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+
+                    if let artist = viewModel.selectedArtist {
+                        Text(" / \(artist.name)")
+                            .foregroundColor(.white.opacity(0.7))
+                        if let album = viewModel.selectedAlbum {
+                            Text(" / \(album.title)")
+                                .foregroundColor(.white.opacity(0.7))
                         }
                     }
-                )
-            case .albums:
-                AlbumsGridView(
-                    albums: viewModel.albums,
-                    onPlayNow: { onPlayNow($0.id, .album) },
-                    onAddToQueue: { onAddToQueue($0.id, .album) },
-                    onLoadMore: {
-                        Task {
-                            await viewModel.loadMore()
-                        }
-                    }
-                )
-            case .tracks:
+
+                    Spacer()
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+            }
+
+            // Show appropriate content based on navigation state
+            if let album = viewModel.selectedAlbum {
+                // Album detail: show tracks
                 TracksListView(
                     tracks: viewModel.tracks,
                     onPlayNow: { onPlayNow($0.id, .track) },
                     onAddToQueue: { onAddToQueue($0.id, .track) },
-                    onLoadMore: {
+                    onLoadMore: nil // No pagination for album tracks
+                )
+            } else if let artist = viewModel.selectedArtist {
+                // Artist detail: show albums grouped by type
+                GroupedAlbumsView(
+                    albums: viewModel.albums,
+                    onPlayNow: { onPlayNow($0.id, .album) },
+                    onAddToQueue: { onAddToQueue($0.id, .album) },
+                    onAlbumSelected: { album in
                         Task {
-                            await viewModel.loadMore()
+                            await viewModel.selectAlbum(album)
                         }
                     }
                 )
-            case .playlists:
-                PlaylistsListView(
-                    playlists: viewModel.playlists,
-                    onPlayNow: { onPlayNow($0.id, .playlist) },
-                    onAddToQueue: { onAddToQueue($0.id, .playlist) },
-                    onLoadMore: {
-                        Task {
-                            await viewModel.loadMore()
+            } else {
+                // Main library view
+                switch viewModel.selectedCategory {
+                case .artists:
+                    ArtistsGridView(
+                        artists: viewModel.artists,
+                        onPlayNow: { onPlayNow($0.id, .artist) },
+                        onAddToQueue: { onAddToQueue($0.id, .artist) },
+                        onArtistSelected: { artist in
+                            Task {
+                                await viewModel.selectArtist(artist)
+                            }
+                        },
+                        onLoadMore: {
+                            Task {
+                                await viewModel.loadMore()
+                            }
                         }
-                    }
-                )
-            case .radio, .genres:
-                Text("Coming Soon")
-                    .foregroundColor(.white.opacity(0.5))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    )
+                case .albums:
+                    AlbumsGridView(
+                        albums: viewModel.albums,
+                        onPlayNow: { onPlayNow($0.id, .album) },
+                        onAddToQueue: { onAddToQueue($0.id, .album) },
+                        onLoadMore: {
+                            Task {
+                                await viewModel.loadMore()
+                            }
+                        }
+                    )
+                case .tracks:
+                    TracksListView(
+                        tracks: viewModel.tracks,
+                        onPlayNow: { onPlayNow($0.id, .track) },
+                        onAddToQueue: { onAddToQueue($0.id, .track) },
+                        onLoadMore: {
+                            Task {
+                                await viewModel.loadMore()
+                            }
+                        }
+                    )
+                case .playlists:
+                    PlaylistsListView(
+                        playlists: viewModel.playlists,
+                        onPlayNow: { onPlayNow($0.id, .playlist) },
+                        onAddToQueue: { onAddToQueue($0.id, .playlist) },
+                        onLoadMore: {
+                            Task {
+                                await viewModel.loadMore()
+                            }
+                        }
+                    )
+                case .radio, .genres:
+                    Text("Coming Soon")
+                        .foregroundColor(.white.opacity(0.5))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
 
             // Pagination UI - Load More button

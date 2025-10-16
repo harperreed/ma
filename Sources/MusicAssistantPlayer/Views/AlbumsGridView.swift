@@ -7,6 +7,7 @@ struct AlbumsGridView: View {
     let albums: [Album]
     let onPlayNow: (Album) -> Void
     let onAddToQueue: (Album) -> Void
+    var onAlbumSelected: ((Album) -> Void)? = nil
     var onLoadMore: (() -> Void)? = nil
 
     private let columns = [
@@ -19,7 +20,8 @@ struct AlbumsGridView: View {
                 AlbumCard(
                     album: album,
                     onPlayNow: { onPlayNow(album) },
-                    onAddToQueue: { onAddToQueue(album) }
+                    onAddToQueue: { onAddToQueue(album) },
+                    onTap: onAlbumSelected != nil ? { onAlbumSelected?(album) } : nil
                 )
                 .onAppear {
                     // Trigger load more when the last item appears
@@ -37,6 +39,7 @@ struct AlbumCard: View {
     let album: Album
     let onPlayNow: () -> Void
     let onAddToQueue: () -> Void
+    var onTap: (() -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -113,14 +116,18 @@ struct AlbumCard: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
+        }
     }
 }
 
 #Preview {
     AlbumsGridView(
         albums: [
-            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 12, year: 2024, duration: 3600),
-            Album(id: "2", title: "Another Album", artist: "Another Artist", artworkURL: nil, trackCount: 8, year: nil, duration: 2400)
+            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 12, year: 2024, duration: 3600, albumType: .album),
+            Album(id: "2", title: "Another Album", artist: "Another Artist", artworkURL: nil, trackCount: 8, year: nil, duration: 2400, albumType: .album)
         ],
         onPlayNow: { _ in },
         onAddToQueue: { _ in }

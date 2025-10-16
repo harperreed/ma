@@ -20,13 +20,311 @@ class LibraryService: ObservableObject {
     @Published var currentOffset: Int = 0
     @Published var currentSort: LibrarySortOption = .nameAsc
     @Published var currentFilter: LibraryFilter = LibraryFilter()
+    @Published var hydrationProgress: Double? = nil // nil = not running, 0.0-1.0 = progress
+    @Published var hydrationStatus: String? = nil // Status message
     private let pageSize: Int = 50
-    private let cache = LibraryCache()
+    let cache = LibraryCache(ttl: 3600) // 1 hour TTL for regular cache, Public for ViewModel access to hydrated cache
 
     private(set) var client: MusicAssistantClient?
 
     init(client: MusicAssistantClient?) {
         self.client = client
+    }
+
+    // MARK: - Library Hydration
+
+    /// Invalidate hydration cache to force fresh download
+    func invalidateHydrationCache() {
+        let cacheKey = "hydrated_library_artists"
+        cache.remove(forKey: cacheKey)
+        print("🗑️ [LibraryService] Hydration cache invalidated")
+    }
+
+    /// Background hydration - runs asynchronously without blocking UI
+    func hydrateLibraryInBackground(forceRefresh: Bool = false) async {
+        // Check if we have cached hydrated data
+        let cacheKey = "hydrated_library_artists"
+        if !forceRefresh, cache.get(forKey: cacheKey) as [Artist]? != nil {
+            print("✅ [LibraryService] Hydrated data already cached, skipping background hydration")
+            return
+        }
+
+        print("🔄 [LibraryService] Starting background library hydration...")
+
+        await MainActor.run {
+            self.hydrationProgress = 0.0
+            self.hydrationStatus = "Starting..."
+        }
+
+        do {
+            guard let client = client else {
+                print("❌ [LibraryService] No client available for background hydration")
+                await MainActor.run {
+                    self.hydrationProgress = nil
+                    self.hydrationStatus = nil
+                }
+                return
+            }
+
+            // Fetch all albums in background
+            var allAlbums: [Album] = []
+            var albumOffset = 0
+            let fetchLimit = 200
+            var hasMore = true
+            var batchCount = 0
+
+            await MainActor.run {
+                self.hydrationStatus = "Loading albums..."
+            }
+
+            while hasMore { // No limit - fetch all albums
+                let result = try await client.sendCommand(
+                    command: "music/albums/library_items",
+                    args: [
+                        "limit": fetchLimit,
+                        "offset": albumOffset,
+                        "order_by": "name"
+                    ]
+                )
+
+                if let result = result {
+                    let batch = parseAlbums(from: result)
+                    allAlbums.append(contentsOf: batch)
+                    albumOffset += batch.count
+                    hasMore = batch.count == fetchLimit
+                    batchCount += 1
+
+                    // Update progress (albums = 50% of total work)
+                    let albumProgress = min(Double(batchCount) / 50.0, 1.0) * 0.5
+                    await MainActor.run {
+                        self.hydrationProgress = albumProgress
+                        self.hydrationStatus = "Loading albums (\(allAlbums.count))..."
+                    }
+
+                    print("📦 [LibraryService] Background: fetched \(allAlbums.count) albums so far...")
+                } else {
+                    hasMore = false
+                }
+            }
+
+            print("✅ [LibraryService] Background: fetched \(allAlbums.count) total albums")
+
+            // Build artist -> album count mapping
+            var artistAlbumCounts: [String: Int] = [:]
+            for album in allAlbums {
+                artistAlbumCounts[album.artist, default: 0] += 1
+            }
+
+            // Fetch all artists
+            var allArtists: [Artist] = []
+            var artistOffset = 0
+            hasMore = true
+            batchCount = 0
+
+            await MainActor.run {
+                self.hydrationStatus = "Loading artists..."
+            }
+
+            while hasMore { // No limit - fetch all artists
+                let result = try await client.sendCommand(
+                    command: "music/artists/library_items",
+                    args: [
+                        "limit": fetchLimit,
+                        "offset": artistOffset,
+                        "order_by": "name"
+                    ]
+                )
+
+                if let result = result {
+                    let batch = parseArtists(from: result)
+                    allArtists.append(contentsOf: batch)
+                    artistOffset += batch.count
+                    hasMore = batch.count == fetchLimit
+                    batchCount += 1
+
+                    // Update progress (artists = remaining 50% of work)
+                    let artistProgress = 0.5 + (min(Double(batchCount) / 25.0, 1.0) * 0.5)
+                    await MainActor.run {
+                        self.hydrationProgress = artistProgress
+                        self.hydrationStatus = "Loading artists (\(allArtists.count))..."
+                    }
+
+                    print("👤 [LibraryService] Background: fetched \(allArtists.count) artists so far...")
+                } else {
+                    hasMore = false
+                }
+            }
+
+            print("✅ [LibraryService] Background: fetched \(allArtists.count) total artists")
+
+            // Hydrate artists with album counts
+            let hydratedArtists = allArtists.map { artist in
+                let albumCount = artistAlbumCounts[artist.name] ?? 0
+                return Artist(
+                    id: artist.id,
+                    name: artist.name,
+                    artworkURL: artist.artworkURL,
+                    albumCount: albumCount
+                )
+            }
+
+            // Cache the results
+            cache.set(hydratedArtists, forKey: cacheKey)
+            print("✅ [LibraryService] Background hydration complete! Cached \(hydratedArtists.count) artists with album counts")
+
+            // Update UI if we're on the artists view
+            await MainActor.run {
+                self.hydrationProgress = 1.0
+                self.hydrationStatus = "Complete!"
+
+                if self.artists.isEmpty || self.artists.allSatisfy({ $0.albumCount == 0 }) {
+                    self.artists = hydratedArtists
+                    print("🔄 [LibraryService] Updated UI with hydrated artists")
+                }
+
+                // Clear progress after a moment
+                Task {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                    await MainActor.run {
+                        self.hydrationProgress = nil
+                        self.hydrationStatus = nil
+                    }
+                }
+            }
+
+        } catch {
+            print("❌ [LibraryService] Background hydration error: \(error.localizedDescription)")
+            await MainActor.run {
+                self.hydrationProgress = nil
+                self.hydrationStatus = "Failed"
+            }
+        }
+    }
+
+    func hydrateLibrary(forceRefresh: Bool = false) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            AppLogger.network.error("❌ Hydration failed: no client available")
+            throw error
+        }
+
+        // Check if we have cached hydrated data
+        let cacheKey = "hydrated_library_artists"
+        if !forceRefresh, let cached: [Artist] = cache.get(forKey: cacheKey) {
+            AppLogger.network.info("✅ Using cached hydrated library data (\(cached.count) artists)")
+            self.artists = cached
+            return
+        }
+
+        do {
+            print("🔄 [LibraryService] Starting library hydration...")
+            AppLogger.network.info("🔄 Starting library hydration...")
+
+            // Fetch all albums to build artist -> album count mapping
+            var allAlbums: [Album] = []
+            var albumOffset = 0
+            let fetchLimit = 200 // Larger batches for hydration
+            var hasMore = true
+
+            while hasMore {
+                AppLogger.network.debug("Fetching albums batch: offset=\(albumOffset)")
+
+                let result = try await client.sendCommand(
+                    command: "music/albums/library_items",
+                    args: [
+                        "limit": fetchLimit,
+                        "offset": albumOffset,
+                        "order_by": "name"
+                    ]
+                )
+
+                if let result = result {
+                    let batch = parseAlbums(from: result)
+                    allAlbums.append(contentsOf: batch)
+                    albumOffset += batch.count
+                    hasMore = batch.count == fetchLimit
+                    AppLogger.network.debug("Fetched \(batch.count) albums, total: \(allAlbums.count)")
+                } else {
+                    AppLogger.network.warning("⚠️ Albums API returned nil, stopping album fetch")
+                    hasMore = false
+                }
+            }
+
+            AppLogger.network.info("✅ Fetched \(allAlbums.count) total albums")
+
+            // Build artist ID -> album count mapping
+            var artistAlbumCounts: [String: Int] = [:]
+            for album in allAlbums {
+                // Need to map album.artist (string) to artist IDs
+                // This is a limitation - we'll count by artist name for now
+                artistAlbumCounts[album.artist, default: 0] += 1
+            }
+
+            AppLogger.network.debug("Built album count map for \(artistAlbumCounts.count) unique artists")
+
+            // Fetch all artists
+            var allArtists: [Artist] = []
+            var artistOffset = 0
+            hasMore = true
+
+            while hasMore {
+                AppLogger.network.debug("Fetching artists batch: offset=\(artistOffset)")
+
+                let result = try await client.sendCommand(
+                    command: "music/artists/library_items",
+                    args: [
+                        "limit": fetchLimit,
+                        "offset": artistOffset,
+                        "order_by": "name"
+                    ]
+                )
+
+                if let result = result {
+                    let batch = parseArtists(from: result)
+                    allArtists.append(contentsOf: batch)
+                    artistOffset += batch.count
+                    hasMore = batch.count == fetchLimit
+                    AppLogger.network.debug("Fetched \(batch.count) artists, total: \(allArtists.count)")
+                } else {
+                    AppLogger.network.warning("⚠️ Artists API returned nil, stopping artist fetch")
+                    hasMore = false
+                }
+            }
+
+            AppLogger.network.info("✅ Fetched \(allArtists.count) total artists")
+
+            // Hydrate artists with correct album counts
+            let hydratedArtists = allArtists.map { artist in
+                let albumCount = artistAlbumCounts[artist.name] ?? 0
+                return Artist(
+                    id: artist.id,
+                    name: artist.name,
+                    artworkURL: artist.artworkURL,
+                    albumCount: albumCount
+                )
+            }
+
+            print("✅ [LibraryService] Library hydration complete! \(hydratedArtists.count) artists with album counts")
+            AppLogger.network.info("✅ Library hydration complete! \(hydratedArtists.count) artists with album counts")
+
+            // Update state and cache
+            self.artists = hydratedArtists
+            cache.set(hydratedArtists, forKey: cacheKey)
+            lastError = nil
+
+        } catch let error as LibraryError {
+            print("❌ [LibraryService] Hydration error (LibraryError): \(error.localizedDescription)")
+            AppLogger.errors.logError(error, context: "hydrateLibrary")
+            lastError = error
+            throw error
+        } catch {
+            print("❌ [LibraryService] Hydration error (generic): \(error.localizedDescription)")
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "hydrateLibrary")
+            lastError = libError
+            throw libError
+        }
     }
 
     // MARK: - Task 6: Fetch Artists (with Task 7 pagination and Task 8 sorting/filtering)
@@ -141,7 +439,7 @@ class LibraryService: ObservableObject {
                 artworkURL = nil
             }
 
-            // Album count might not be in the response, defaulting to 0
+            // Album count will be hydrated separately via hydrateLibrary()
             let albumCount = item["album_count"] as? Int ?? 0
 
             return Artist(
@@ -182,6 +480,7 @@ class LibraryService: ObservableObject {
         // Check cache first (if not forcing refresh and first page)
         if !forceRefresh && fetchOffset == 0,
            let cached: [Album] = cache.get(forKey: cacheKey) {
+            print("💾 [LibraryService] Using cached albums for artist \(artistKey): \(cached.count) albums")
             AppLogger.network.debug("Using cached albums (artist: \(artistKey), sort: \(sortBy.rawValue))")
             self.albums = cached
             return
@@ -246,10 +545,20 @@ class LibraryService: ObservableObject {
 
     private func parseAlbums(from data: AnyCodable) -> [Album] {
         guard let items = data.value as? [[String: Any]] else {
+            print("❌ [parseAlbums] Data is not an array of dictionaries")
             return []
         }
 
+        print("🔍 [parseAlbums] Parsing \(items.count) items")
+
         return items.compactMap { item in
+            // Debug: print item type if available
+            if let mediaType = item["media_type"] as? String {
+                if mediaType != "album" {
+                    print("⚠️ [parseAlbums] Non-album item detected: \(mediaType) - \(item["name"] as? String ?? "unknown")")
+                }
+            }
+
             guard let id = item["item_id"] as? String,
                   let title = item["name"] as? String
             else {
@@ -280,6 +589,21 @@ class LibraryService: ObservableObject {
             let year = item["year"] as? Int
             let duration = item["duration"] as? Double ?? 0.0
 
+            // Parse album type - Music Assistant uses "album_type" field
+            let albumType: AlbumType
+            if let typeString = item["album_type"] as? String {
+                albumType = AlbumType(rawValue: typeString.lowercased()) ?? .unknown
+            } else {
+                // Fallback: guess based on track count
+                if trackCount <= 3 {
+                    albumType = .single
+                } else if trackCount <= 7 {
+                    albumType = .ep
+                } else {
+                    albumType = .album
+                }
+            }
+
             return Album(
                 id: id,
                 title: title,
@@ -287,7 +611,8 @@ class LibraryService: ObservableObject {
                 artworkURL: artworkURL,
                 trackCount: trackCount,
                 year: year,
-                duration: duration
+                duration: duration,
+                albumType: albumType
             )
         }
     }
@@ -1379,7 +1704,7 @@ class LibraryService: ObservableObject {
             AppLogger.network.info("Adding item \(itemId) to favorites (type: \(mediaType))")
 
             // Music Assistant API: Set favorite flag to true
-            try await client.sendCommand(
+            _ = try await client.sendCommand(
                 command: "music/\(mediaType)s/favorite",
                 args: [
                     "item_id": itemId,
@@ -1413,7 +1738,7 @@ class LibraryService: ObservableObject {
             AppLogger.network.info("Removing item \(itemId) from favorites (type: \(mediaType))")
 
             // Music Assistant API: Set favorite flag to false
-            try await client.sendCommand(
+            _ = try await client.sendCommand(
                 command: "music/\(mediaType)s/favorite",
                 args: [
                     "item_id": itemId,

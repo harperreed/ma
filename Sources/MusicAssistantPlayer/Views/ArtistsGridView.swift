@@ -7,6 +7,7 @@ struct ArtistsGridView: View {
     let artists: [Artist]
     let onPlayNow: (Artist) -> Void
     let onAddToQueue: (Artist) -> Void
+    var onArtistSelected: ((Artist) -> Void)? = nil
     var onLoadMore: (() -> Void)? = nil
 
     private let columns = [
@@ -19,7 +20,8 @@ struct ArtistsGridView: View {
                 ArtistCard(
                     artist: artist,
                     onPlayNow: { onPlayNow(artist) },
-                    onAddToQueue: { onAddToQueue(artist) }
+                    onAddToQueue: { onAddToQueue(artist) },
+                    onTap: onArtistSelected != nil ? { onArtistSelected?(artist) } : nil
                 )
                 .onAppear {
                     // Trigger load more when the last item appears
@@ -37,6 +39,7 @@ struct ArtistCard: View {
     let artist: Artist
     let onPlayNow: () -> Void
     let onAddToQueue: () -> Void
+    var onTap: (() -> Void)? = nil
 
     @State private var isHovered = false
 
@@ -101,6 +104,10 @@ struct ArtistCard: View {
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.6))
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
         }
     }
 }
