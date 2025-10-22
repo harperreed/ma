@@ -46,7 +46,7 @@ struct RoonStyleMainWindowView: View {
         self.streamingPlayer = streamingPlayer
 
         // Create services
-        let playerSvc = PlayerService(client: client)
+        let playerSvc = PlayerService(client: client, streamingPlayer: streamingPlayer)
         let queueSvc = QueueService(client: client)
         let librarySvc = LibraryService(client: client)
         let imageCacheSvc = ImageCacheService()

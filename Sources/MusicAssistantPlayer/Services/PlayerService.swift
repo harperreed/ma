@@ -6,6 +6,9 @@ import Combine
 import MusicAssistantKit
 import os.log
 
+// StreamingPlayer is available via MusicAssistantKit
+typealias StreamingPlayer = MusicAssistantKit.StreamingPlayer
+
 /// Atomic state container for player properties to prevent race conditions
 struct PlayerState: Equatable {
     var currentTrack: Track?
@@ -76,13 +79,15 @@ class PlayerService: ObservableObject {
     }
 
     private let client: MusicAssistantClient?
+    private let streamingPlayer: StreamingPlayer?
     internal var cancellables = Set<AnyCancellable>()
     internal var eventTask: Task<Void, Never>?
     private var connectionMonitorTask: Task<Void, Never>?
     private var progressTask: Task<Void, Never>?
 
-    init(client: MusicAssistantClient? = nil) {
+    init(client: MusicAssistantClient? = nil, streamingPlayer: StreamingPlayer? = nil) {
         self.client = client
+        self.streamingPlayer = streamingPlayer
         subscribeToPlayerEvents()
         monitorConnection()
         setupNowPlayingIntegration()

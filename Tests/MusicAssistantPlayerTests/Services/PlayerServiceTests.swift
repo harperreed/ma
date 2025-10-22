@@ -368,4 +368,27 @@ final class PlayerServiceTests: XCTestCase {
 
         XCTAssertNotNil(service.lastError)
     }
+
+    // MARK: - StreamingPlayer Integration Tests
+
+    @MainActor
+    func testInitializerAcceptsStreamingPlayer() async {
+        let mockClient = MusicAssistantClient(host: "test", port: 8095)
+        let streamingPlayer = StreamingPlayer(client: mockClient, playerName: "Test Player")
+
+        let service = PlayerService(client: mockClient, streamingPlayer: streamingPlayer)
+
+        XCTAssertNotNil(service)
+    }
+
+    @MainActor
+    func testInitializerWorksWithoutStreamingPlayer() async {
+        let mockClient = MusicAssistantClient(host: "test", port: 8095)
+
+        let service = PlayerService(client: mockClient, streamingPlayer: nil)
+
+        XCTAssertNotNil(service)
+        // Verify service is still functional without streamingPlayer
+        XCTAssertNil(service.lastError)
+    }
 }
