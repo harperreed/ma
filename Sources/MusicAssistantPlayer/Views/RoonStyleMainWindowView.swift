@@ -8,6 +8,7 @@ import os.log
 struct RoonStyleMainWindowView: View {
     let client: MusicAssistantClient
     let serverConfig: ServerConfig
+    let streamingPlayer: StreamingPlayer
 
     // MARK: - Services
     @StateObject private var playerService: PlayerService
@@ -39,9 +40,10 @@ struct RoonStyleMainWindowView: View {
     }
 
     // MARK: - Initialization
-    init(client: MusicAssistantClient, serverConfig: ServerConfig) {
+    init(client: MusicAssistantClient, serverConfig: ServerConfig, streamingPlayer: StreamingPlayer) {
         self.client = client
         self.serverConfig = serverConfig
+        self.streamingPlayer = streamingPlayer
 
         // Create services
         let playerSvc = PlayerService(client: client)
@@ -476,7 +478,8 @@ struct RoonStyleMainWindowView: View {
 #Preview {
     let config = ServerConfig(host: "192.168.200.113", port: 8095)
     let client = MusicAssistantClient(host: config.host, port: config.port)
+    let player = StreamingPlayer(client: client, playerName: "Preview Player")
 
-    return RoonStyleMainWindowView(client: client, serverConfig: config)
+    return RoonStyleMainWindowView(client: client, serverConfig: config, streamingPlayer: player)
         .frame(width: 1400, height: 900)
 }

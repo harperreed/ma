@@ -9,13 +9,14 @@ import AppIntents
 struct MusicAssistantPlayerApp: App {
     @State private var serverConfig: ServerConfig? = ServerConfig.load()
     @State private var client: MusicAssistantClient?
+    @State private var streamingPlayer: StreamingPlayer?
     @State private var showSetup: Bool = false
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let config = serverConfig, let client = client {
-                    RoonStyleMainWindowView(client: client, serverConfig: config)
+                if let config = serverConfig, let client = client, let streamingPlayer = streamingPlayer {
+                    RoonStyleMainWindowView(client: client, serverConfig: config, streamingPlayer: streamingPlayer)
                 } else {
                     ServerSetupView { config in
                         self.serverConfig = config
@@ -57,15 +58,34 @@ struct MusicAssistantPlayerApp: App {
                 try await newClient.connect()
                 AppLogger.network.info("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
 
-                // Only set client after successful connection
-                await MainActor.run {
-                    self.client = newClient
+                // Create and register StreamingPlayer
+                let player = StreamingPlayer(client: newClient, playerName: "Music Assistant Player")
+
+                do {
+                    try await player.register()
+                    AppLogger.network.info("StreamingPlayer successfully registered")
+
+                    // Only set state variables after both connection AND registration succeed
+                    await MainActor.run {
+                        self.streamingPlayer = player
+                        self.client = newClient
+                    }
+                } catch {
+                    AppLogger.errors.logError(error, context: "StreamingPlayer registration failed")
+                    // Disconnect client and clear state on registration failure
+                    await newClient.disconnect()
+                    await MainActor.run {
+                        self.client = nil
+                        self.streamingPlayer = nil
+                        self.serverConfig = nil
+                    }
                 }
             } catch {
                 AppLogger.errors.logError(error, context: "Connection failed")
                 // Clear client on failure so user can retry
                 await MainActor.run {
                     self.client = nil
+                    self.streamingPlayer = nil
                     self.serverConfig = nil
                 }
             }
