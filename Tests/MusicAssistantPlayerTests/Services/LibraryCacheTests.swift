@@ -48,7 +48,7 @@ final class LibraryCacheTests: XCTestCase {
             Artist(id: "1", name: "Test Artist", artworkURL: nil, albumCount: 5)
         ]
         let albums = [
-            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 10, year: 2023, duration: 3600.0)
+            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 10, year: 2023, duration: 3600.0, albumType: .album)
         ]
 
         cache.set(artists, forKey: "artists")
@@ -69,7 +69,7 @@ final class LibraryCacheTests: XCTestCase {
             Artist(id: "1", name: "Test Artist", artworkURL: nil, albumCount: 5)
         ]
         let albums = [
-            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 10, year: 2023, duration: 3600.0)
+            Album(id: "1", title: "Test Album", artist: "Test Artist", artworkURL: nil, trackCount: 10, year: 2023, duration: 3600.0, albumType: .album)
         ]
 
         cache.set(artists, forKey: "artists")

@@ -13,7 +13,8 @@ final class AlbumTests: XCTestCase {
             artworkURL: URL(string: "https://example.com/album.jpg"),
             trackCount: 12,
             year: 2024,
-            duration: 3600.0
+            duration: 3600.0,
+            albumType: .album
         )
 
         XCTAssertEqual(album.id, "album-123")
@@ -32,7 +33,8 @@ final class AlbumTests: XCTestCase {
             artworkURL: nil,
             trackCount: 0,
             year: nil,
-            duration: 0.0
+            duration: 0.0,
+            albumType: .album
         )
 
         XCTAssertNil(album.artworkURL)
