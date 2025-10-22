@@ -13,7 +13,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/harperreed/MusicAssistantKit.git", from: "0.0.4")
+        .package(url: "https://github.com/harperreed/MusicAssistantKit.git", from: "0.2.1")
     ],
     targets: [
         .executableTarget(
