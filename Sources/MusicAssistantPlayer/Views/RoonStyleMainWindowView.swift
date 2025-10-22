@@ -303,28 +303,47 @@ struct RoonStyleMainWindowView: View {
 
     private func fetchInitialData() async {
         do {
-            // Fetch players
+            // Fetch players from Music Assistant
+            var allPlayers: [Player] = []
+
             if let result = try await client.getPlayers() {
-                let players = PlayerMapper.parsePlayers(from: result)
+                allPlayers = PlayerMapper.parsePlayers(from: result)
+            }
 
-                await MainActor.run {
-                    self.availablePlayers = players
+            // Add StreamingPlayer to the list if it has been registered
+            if let streamingPlayerId = await streamingPlayer.currentPlayerId {
+                let streamingPlayerModel = Player(
+                    id: streamingPlayerId,
+                    name: "Music Assistant Player",
+                    isActive: true,
+                    type: .player,
+                    groupChildIds: [],
+                    syncedTo: nil,
+                    activeGroup: nil
+                )
+                allPlayers.insert(streamingPlayerModel, at: 0)
+            }
 
-                    // Auto-select first active player
-                    if let firstActive = players.first(where: { $0.isActive }) {
-                        self.selectedPlayer = firstActive
-                        self.playerService.selectedPlayer = firstActive
-                    } else if let first = players.first {
-                        self.selectedPlayer = first
-                        self.playerService.selectedPlayer = first
-                    }
+            await MainActor.run {
+                self.availablePlayers = allPlayers
 
-                    // Fetch initial state and queue for selected player
-                    if let player = selectedPlayer {
-                        Task {
-                            await playerService.fetchPlayerState(for: player.id)
-                            try? await queueService.fetchQueue(for: player.id)
-                        }
+                // Auto-select StreamingPlayer if it's available, otherwise first active player
+                if let streamingPlayer = allPlayers.first(where: { $0.name == "Music Assistant Player" }) {
+                    self.selectedPlayer = streamingPlayer
+                    self.playerService.selectedPlayer = streamingPlayer
+                } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
+                    self.selectedPlayer = firstActive
+                    self.playerService.selectedPlayer = firstActive
+                } else if let first = allPlayers.first {
+                    self.selectedPlayer = first
+                    self.playerService.selectedPlayer = first
+                }
+
+                // Fetch initial state and queue for selected player
+                if let player = selectedPlayer {
+                    Task {
+                        await playerService.fetchPlayerState(for: player.id)
+                        try? await queueService.fetchQueue(for: player.id)
                     }
                 }
             }
@@ -348,29 +367,49 @@ struct RoonStyleMainWindowView: View {
 
     private func refreshPlayerList() async {
         do {
+            // Fetch players from Music Assistant
+            var allPlayers: [Player] = []
+
             if let result = try await client.getPlayers() {
-                let players = PlayerMapper.parsePlayers(from: result)
+                allPlayers = PlayerMapper.parsePlayers(from: result)
+            }
 
-                await MainActor.run {
-                    self.availablePlayers = players
+            // Add StreamingPlayer to the list if it has been registered
+            if let streamingPlayerId = await streamingPlayer.currentPlayerId {
+                let streamingPlayerModel = Player(
+                    id: streamingPlayerId,
+                    name: "Music Assistant Player",
+                    isActive: true,
+                    type: .player,
+                    groupChildIds: [],
+                    syncedTo: nil,
+                    activeGroup: nil
+                )
+                allPlayers.insert(streamingPlayerModel, at: 0)
+            }
 
-                    // Update selected player if it still exists
-                    if let currentlySelected = selectedPlayer,
-                       let updatedPlayer = players.first(where: { $0.id == currentlySelected.id }) {
-                        self.selectedPlayer = updatedPlayer
-                        self.playerService.selectedPlayer = updatedPlayer
-                    } else if selectedPlayer != nil {
-                        // Previously selected player no longer exists, select a new one
-                        if let firstActive = players.first(where: { $0.isActive }) {
-                            self.selectedPlayer = firstActive
-                            self.playerService.selectedPlayer = firstActive
-                        } else if let first = players.first {
-                            self.selectedPlayer = first
-                            self.playerService.selectedPlayer = first
-                        } else {
-                            self.selectedPlayer = nil
-                            self.playerService.selectedPlayer = nil
-                        }
+            await MainActor.run {
+                self.availablePlayers = allPlayers
+
+                // Update selected player if it still exists
+                if let currentlySelected = selectedPlayer,
+                   let updatedPlayer = allPlayers.first(where: { $0.id == currentlySelected.id }) {
+                    self.selectedPlayer = updatedPlayer
+                    self.playerService.selectedPlayer = updatedPlayer
+                } else if selectedPlayer != nil {
+                    // Previously selected player no longer exists, select a new one
+                    if let streamingPlayer = allPlayers.first(where: { $0.name == "Music Assistant Player" }) {
+                        self.selectedPlayer = streamingPlayer
+                        self.playerService.selectedPlayer = streamingPlayer
+                    } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
+                        self.selectedPlayer = firstActive
+                        self.playerService.selectedPlayer = firstActive
+                    } else if let first = allPlayers.first {
+                        self.selectedPlayer = first
+                        self.playerService.selectedPlayer = first
+                    } else {
+                        self.selectedPlayer = nil
+                        self.playerService.selectedPlayer = nil
                     }
                 }
             }
