@@ -27,7 +27,7 @@ class LibraryService: ObservableObject {
     @Published var currentSort: LibrarySortOption = .nameAsc
     @Published var currentFilter: LibraryFilter = LibraryFilter()
     private let pageSize: Int = 50
-    let cache = LibraryCache(ttl: 3600) // 1 hour TTL for regular cache, Public for ViewModel access to hydrated cache
+    let cache = LibraryCache(ttl: 3600) // 1 hour TTL for lazy-loaded content cache
 
     private(set) var client: MusicAssistantClient?
     private var eventTask: Task<Void, Never>?
@@ -43,7 +43,9 @@ class LibraryService: ObservableObject {
     }
 
     /// Update the client reference and resubscribe to events
-    /// Call this when reconnecting to a different server
+    /// - Parameter newClient: The new client instance, or nil to disconnect
+    /// - Note: This method preserves existing library data. Call clearAll() first if switching servers.
+    /// - Usage: Reconnecting to the same server after network interruption (keeps data)
     func updateClient(_ newClient: MusicAssistantClient?) {
         AppLogger.network.info("🔄 Updating LibraryService client reference")
         eventTask?.cancel()
@@ -51,8 +53,9 @@ class LibraryService: ObservableObject {
         subscribeToLibraryEvents()
     }
 
-    /// Clear all library data
-    /// Call this when disconnecting from server to prevent showing stale data
+    /// Clear all library data and cache
+    /// - Note: This method does NOT disconnect the client or cancel event subscription
+    /// - Usage: Switching to a different server (clear old data before reconnecting)
     func clearAll() {
         AppLogger.network.info("🧹 Clearing all library data")
         artistsDict.removeAll()
@@ -112,22 +115,32 @@ class LibraryService: ObservableObject {
         case .artist:
             if let artist = parseArtist(from: event.data) {
                 artistsDict[artist.id] = artist
+            } else {
+                AppLogger.network.warning("Failed to parse artist from event: \(event.itemId ?? "unknown")")
             }
         case .album:
             if let album = parseAlbum(from: event.data) {
                 albumsDict[album.id] = album
+            } else {
+                AppLogger.network.warning("Failed to parse album from event: \(event.itemId ?? "unknown")")
             }
         case .track:
             if let track = parseTrack(from: event.data) {
                 tracksDict[track.id] = track
+            } else {
+                AppLogger.network.warning("Failed to parse track from event: \(event.itemId ?? "unknown")")
             }
         case .playlist:
             if let playlist = parsePlaylist(from: event.data) {
                 playlistsDict[playlist.id] = playlist
+            } else {
+                AppLogger.network.warning("Failed to parse playlist from event: \(event.itemId ?? "unknown")")
             }
         case .radio:
             if let radio = parseRadio(from: event.data) {
                 radiosDict[radio.id] = radio
+            } else {
+                AppLogger.network.warning("Failed to parse radio from event: \(event.itemId ?? "unknown")")
             }
         case .unknown:
             break
