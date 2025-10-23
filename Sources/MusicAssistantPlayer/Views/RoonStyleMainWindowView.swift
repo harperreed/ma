@@ -502,6 +502,8 @@ struct RoonStyleMainWindowView: View {
             return "playlist://\(itemId)"
         case .track:
             return "track://\(itemId)"
+        case .radio:
+            return "radio://\(itemId)"
         }
     }
 }

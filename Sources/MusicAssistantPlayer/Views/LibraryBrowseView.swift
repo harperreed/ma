@@ -195,7 +195,18 @@ struct LibraryBrowseView: View {
                             }
                         }
                     )
-                case .radio, .genres:
+                case .radio:
+                    RadiosListView(
+                        radios: viewModel.radios,
+                        onPlayNow: { onPlayNow($0.id, .radio) },
+                        onAddToQueue: { onAddToQueue($0.id, .radio) },
+                        onLoadMore: {
+                            Task {
+                                await viewModel.loadMore()
+                            }
+                        }
+                    )
+                case .genres:
                     Text("Coming Soon")
                         .foregroundColor(.white.opacity(0.5))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -238,6 +249,7 @@ enum LibraryItemType {
     case album
     case playlist
     case track
+    case radio
 }
 
 struct SearchBar: View {
