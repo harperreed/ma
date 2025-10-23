@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/harperreed/MusicAssistantKit.git",
       "state" : {
-        "revision" : "f6faa9aa6b9320821cc0528762563ed68e714526",
-        "version" : "0.0.4"
+        "revision" : "c72a0c492c9d0e33fb9a6dbbf55273365d59a822",
+        "version" : "0.2.1"
       }
     }
   ],
