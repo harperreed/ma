@@ -97,9 +97,6 @@ class QueueService: ObservableObject {
 
                     // If loop completes normally (stream ended), log and retry
                     AppLogger.network.warning("Queue event stream ended normally, will retry")
-                } catch {
-                    // Catch any unexpected errors from the stream
-                    AppLogger.network.error("Queue event stream error: \(error.localizedDescription)")
                 }
 
                 // Update error state
