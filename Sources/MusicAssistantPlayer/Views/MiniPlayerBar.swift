@@ -95,50 +95,65 @@ struct MiniPlayerBar: View {
 
             Spacer()
 
-            // Center: Transport controls
-            HStack(spacing: 20) {
-                Button(action: { nowPlayingViewModel.skipPrevious() }) {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(.white)
-                }
-                .buttonStyle(.plain)
-                .disabled(selectedPlayer == nil)
-
-                Button(action: {
-                    if nowPlayingViewModel.isPlaying {
-                        nowPlayingViewModel.pause()
-                    } else {
-                        nowPlayingViewModel.play()
+            // Center: Transport controls with progress scrubber below (Spotify-style)
+            VStack(spacing: 8) {
+                // Transport controls
+                HStack(spacing: 20) {
+                    Button(action: { nowPlayingViewModel.skipPrevious() }) {
+                        Image(systemName: "backward.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
                     }
-                }) {
-                    Image(systemName: nowPlayingViewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
-                }
-                .buttonStyle(.plain)
-                .disabled(selectedPlayer == nil)
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
 
-                Button(action: { nowPlayingViewModel.skipNext() }) {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(.white)
+                    Button(action: {
+                        if nowPlayingViewModel.isPlaying {
+                            nowPlayingViewModel.pause()
+                        } else {
+                            nowPlayingViewModel.play()
+                        }
+                    }) {
+                        Image(systemName: nowPlayingViewModel.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
+
+                    Button(action: { nowPlayingViewModel.skipNext() }) {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
                 }
-                .buttonStyle(.plain)
-                .disabled(selectedPlayer == nil)
+
+                // Progress scrubber (below transport controls)
+                SeekableProgressBar(
+                    progress: nowPlayingViewModel.progress,
+                    duration: nowPlayingViewModel.duration,
+                    onSeek: { time in
+                        nowPlayingViewModel.seek(to: time)
+                    }
+                )
+                .frame(width: 400)
             }
 
             Spacer()
 
-            // Right: Seekable progress bar
-            SeekableProgressBar(
-                progress: nowPlayingViewModel.progress,
-                duration: nowPlayingViewModel.duration,
-                onSeek: { time in
-                    nowPlayingViewModel.seek(to: time)
+            // Right: Volume control
+            VolumeControl(
+                volume: Binding(
+                    get: { nowPlayingViewModel.volume },
+                    set: { nowPlayingViewModel.volume = $0 }
+                ),
+                onVolumeChange: { volume in
+                    nowPlayingViewModel.setVolume(volume)
                 }
             )
-            .frame(width: 300)
+            .frame(width: 200)
         }
         .padding(.horizontal, 20)
         .frame(height: barHeight)
