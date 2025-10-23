@@ -65,6 +65,7 @@ class LibraryService: ObservableObject {
         lastError = nil
         hasMoreItems = false
         currentOffset = 0
+        cache.clear()
     }
 
     // MARK: - Event Subscription
@@ -412,7 +413,6 @@ class LibraryService: ObservableObject {
                 artworkURL = nil
             }
 
-            // Album count will be hydrated separately via hydrateLibrary()
             let albumCount = item["album_count"] as? Int ?? 0
 
             return Artist(
