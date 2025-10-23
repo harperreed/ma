@@ -969,6 +969,53 @@ class LibraryService: ObservableObject {
         }
     }
 
+    func searchRadios(query: String) async throws {
+        guard let client = client else {
+            let error = LibraryError.noClientAvailable
+            lastError = error
+            throw error
+        }
+
+        guard !query.isEmpty else {
+            // Empty query - clear results
+            self.radios = []
+            return
+        }
+
+        do {
+            AppLogger.network.info("Searching radios: query='\(query)'")
+
+            // Music Assistant API: music/radios/search
+            let result = try await client.sendCommand(
+                command: "music/radios/search",
+                args: [
+                    "search": query,
+                    "limit": 50
+                ]
+            )
+
+            if let result = result {
+                let parsedRadios = parseRadios(from: result)
+                self.radios = parsedRadios
+                self.hasMoreItems = false // Search results don't paginate
+                lastError = nil
+            } else {
+                self.radios = []
+                self.hasMoreItems = false
+                lastError = nil
+            }
+        } catch let error as LibraryError {
+            AppLogger.errors.logError(error, context: "searchRadios")
+            lastError = error
+            throw error
+        } catch {
+            let libError = LibraryError.networkError(error.localizedDescription)
+            AppLogger.errors.logError(error, context: "searchRadios")
+            lastError = libError
+            throw libError
+        }
+    }
+
     private func parseRadios(from data: AnyCodable) -> [Radio] {
         guard let items = data.value as? [[String: Any]] else {
             return []
