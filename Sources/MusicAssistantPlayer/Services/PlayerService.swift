@@ -90,7 +90,7 @@ class PlayerService: ObservableObject {
         self.streamingPlayer = streamingPlayer
         subscribeToPlayerEvents()
         monitorConnection()
-        setupNowPlayingIntegration()
+        // TODO: Re-implement Now Playing integration if needed
     }
 
     deinit {
@@ -269,9 +269,6 @@ class PlayerService: ObservableObject {
 
                     // If loop completes normally (stream ended), log and retry
                     AppLogger.network.warning("Player event stream ended normally, will retry")
-                } catch {
-                    // Catch any unexpected errors from the stream
-                    AppLogger.network.error("Player event stream error: \(error.localizedDescription)")
                 }
 
                 // Update connection state to indicate error
@@ -561,7 +558,7 @@ class PlayerService: ObservableObject {
             AppLogger.player.info("Setting shuffle to: \(enabled) on player: \(player.name)")
 
             // Music Assistant API: player_queues/queue_command with shuffle
-            try await client.sendCommand(
+            _ = try await client.sendCommand(
                 command: "player_queues/queue_command",
                 args: [
                     "queue_id": player.id,
@@ -605,7 +602,7 @@ class PlayerService: ObservableObject {
             AppLogger.player.info("Setting repeat to: \(mode) on player: \(player.name)")
 
             // Music Assistant API: player_queues/queue_command with repeat
-            try await client.sendCommand(
+            _ = try await client.sendCommand(
                 command: "player_queues/queue_command",
                 args: [
                     "queue_id": player.id,
@@ -645,7 +642,7 @@ class PlayerService: ObservableObject {
             AppLogger.player.info("Toggling favorite for track: \(trackId) to: \(newFavoriteState)")
 
             // Music Assistant API: music/tracks/favorite
-            try await client.sendCommand(
+            _ = try await client.sendCommand(
                 command: "music/tracks/favorite",
                 args: [
                     "item_id": trackId,
