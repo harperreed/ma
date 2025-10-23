@@ -73,6 +73,10 @@ class LibraryViewModel: ObservableObject {
         libraryService.tracks
     }
 
+    var radios: [Radio] {
+        libraryService.radios
+    }
+
     var errorMessage: String? {
         libraryService.lastError?.localizedDescription
     }
@@ -104,7 +108,13 @@ class LibraryViewModel: ObservableObject {
             case .playlists:
                 try await libraryService.fetchPlaylists()
             case .radio:
-                try await libraryService.fetchRadios()
+                try await libraryService.fetchRadios(
+                    limit: nil,
+                    offset: 0,
+                    sort: selectedSort,
+                    filter: selectedFilter,
+                    forceRefresh: false
+                )
             case .genres:
                 try await libraryService.fetchGenres()
             }
