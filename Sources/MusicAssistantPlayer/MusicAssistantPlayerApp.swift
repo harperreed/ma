@@ -54,6 +54,12 @@ struct MusicAssistantPlayerApp: App {
                 }
                 .keyboardShortcut("k", modifiers: [.command, .shift])
 
+                Button("Disconnect") {
+                    disconnectServer()
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+                .disabled(serverConfig == nil)
+
                 Divider()
 
                 if let config = serverConfig {
@@ -67,8 +73,8 @@ struct MusicAssistantPlayerApp: App {
         }
     }
 
-    private func changeServer() {
-        AppLogger.ui.info("🔄 Changing server - disconnecting current client")
+    private func disconnectServer() {
+        AppLogger.ui.info("🔌 Disconnecting from server")
 
         Task {
             // Disconnect current client gracefully
@@ -76,7 +82,7 @@ struct MusicAssistantPlayerApp: App {
                 await client.disconnect()
             }
 
-            // Clear state and config to show ServerSetupView
+            // Clear state and config
             await MainActor.run {
                 self.client = nil
                 self.streamingPlayer = nil
@@ -85,8 +91,14 @@ struct MusicAssistantPlayerApp: App {
 
             // Clear saved config from UserDefaults
             ServerConfig.clear()
-            AppLogger.ui.info("✅ Cleared server config - showing setup view")
+            AppLogger.ui.info("✅ Disconnected - config cleared")
         }
+    }
+
+    private func changeServer() {
+        AppLogger.ui.info("🔄 Changing server - disconnecting current client")
+        // Just call disconnect - it does exactly what we need
+        disconnectServer()
     }
 
     private func handleConnection(config: ServerConfig) {
