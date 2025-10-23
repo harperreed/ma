@@ -20,21 +20,7 @@ struct LibraryBrowseView: View {
             // Sort and Filter toolbar
             LibraryToolbar(viewModel: viewModel)
 
-            // Hydration progress bar
-            if let progress = viewModel.libraryService.hydrationProgress,
-               let status = viewModel.libraryService.hydrationStatus {
-                HStack(spacing: 12) {
-                    ProgressView(value: progress, total: 1.0)
-                        .progressViewStyle(.linear)
-                        .frame(maxWidth: 300)
-                    Text(status)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.2))
-            }
+            // Event-driven library - no hydration progress needed!
 
             Divider()
                 .background(Color.white.opacity(0.1))

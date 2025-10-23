@@ -26,10 +26,8 @@ class LibraryViewModel: ObservableObject {
         self.libraryService = libraryService
         setupSearchDebouncing()
 
-        // Start background hydration (force refresh to get latest data with no limits)
-        Task {
-            await libraryService.hydrateLibraryInBackground(forceRefresh: true)
-        }
+        // Event-driven library - no hydration needed!
+        // LibraryService subscribes to events automatically
     }
 
     private func setupSearchDebouncing() {
@@ -91,16 +89,8 @@ class LibraryViewModel: ObservableObject {
         do {
             switch selectedCategory {
             case .artists:
-                // Try to load from hydrated cache first, fallback to regular fetch
-                let cacheKey = "hydrated_library_artists"
-                if let cached: [Artist] = libraryService.cache.get(forKey: cacheKey) {
-                    print("📱 [LibraryViewModel] Loading artists from hydrated cache (\(cached.count) artists)")
-                    libraryService.artists = cached
-                } else {
-                    print("📱 [LibraryViewModel] Fetching artists (hydration still in progress)...")
-                    try await libraryService.fetchArtists()
-                    print("📱 [LibraryViewModel] Artists fetched: \(libraryService.artists.count)")
-                }
+                // Lazy load first page of artists
+                try await libraryService.fetchArtists()
             case .albums:
                 try await libraryService.fetchAlbums(for: nil)
             case .tracks:

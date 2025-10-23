@@ -1,5 +1,6 @@
-// ABOUTME: Service for fetching and managing Music Assistant library content
-// ABOUTME: Provides methods to fetch artists, albums, tracks, playlists, and perform playback actions
+// ABOUTME: Event-driven Music Assistant library service with real-time sync via media item events
+// ABOUTME: Uses dictionary storage for O(1) updates, lazy loading, no expensive hydration needed
+
 
 import Foundation
 import MusicAssistantKit
@@ -8,11 +9,16 @@ import os.log
 
 @MainActor
 class LibraryService: ObservableObject {
-    @Published var artists: [Artist] = []
-    @Published var albums: [Album] = []
-    @Published var playlists: [Playlist] = []
-    @Published var tracks: [Track] = []
-    @Published var radios: [Radio] = []
+    @Published private(set) var artistsDict: [String: Artist] = [:]
+    var artists: [Artist] { artistsDict.values.sorted { $0.name < $1.name } }
+    @Published private(set) var albumsDict: [String: Album] = [:]
+    var albums: [Album] { albumsDict.values.sorted { $0.title < $1.title } }
+    @Published private(set) var playlistsDict: [String: Playlist] = [:]
+    var playlists: [Playlist] { playlistsDict.values.sorted { $0.name < $1.name } }
+    @Published private(set) var tracksDict: [String: Track] = [:]
+    var tracks: [Track] { tracksDict.values.sorted { $0.title < $1.title } }
+    @Published private(set) var radiosDict: [String: Radio] = [:]
+    var radios: [Radio] { radiosDict.values.sorted { $0.name < $1.name } }
     @Published var genres: [Genre] = []
     @Published var providers: [String] = []
     @Published var lastError: LibraryError?
@@ -20,312 +26,252 @@ class LibraryService: ObservableObject {
     @Published var currentOffset: Int = 0
     @Published var currentSort: LibrarySortOption = .nameAsc
     @Published var currentFilter: LibraryFilter = LibraryFilter()
-    @Published var hydrationProgress: Double? = nil // nil = not running, 0.0-1.0 = progress
-    @Published var hydrationStatus: String? = nil // Status message
     private let pageSize: Int = 50
     let cache = LibraryCache(ttl: 3600) // 1 hour TTL for regular cache, Public for ViewModel access to hydrated cache
 
     private(set) var client: MusicAssistantClient?
+    private var eventTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
 
     init(client: MusicAssistantClient?) {
         self.client = client
+        subscribeToLibraryEvents()
+    }
+    
+    deinit {
+        eventTask?.cancel()
     }
 
-    // MARK: - Library Hydration
-
-    /// Invalidate hydration cache to force fresh download
-    func invalidateHydrationCache() {
-        let cacheKey = "hydrated_library_artists"
-        cache.remove(forKey: cacheKey)
-        print("🗑️ [LibraryService] Hydration cache invalidated")
-    }
-
-    /// Background hydration - runs asynchronously without blocking UI
-    func hydrateLibraryInBackground(forceRefresh: Bool = false) async {
-        // Check if we have cached hydrated data
-        let cacheKey = "hydrated_library_artists"
-        if !forceRefresh, cache.get(forKey: cacheKey) as [Artist]? != nil {
-            print("✅ [LibraryService] Hydrated data already cached, skipping background hydration")
-            return
-        }
-
-        print("🔄 [LibraryService] Starting background library hydration...")
-
-        await MainActor.run {
-            self.hydrationProgress = 0.0
-            self.hydrationStatus = "Starting..."
-        }
-
-        do {
-            guard let client = client else {
-                print("❌ [LibraryService] No client available for background hydration")
-                await MainActor.run {
-                    self.hydrationProgress = nil
-                    self.hydrationStatus = nil
-                }
-                return
-            }
-
-            // Fetch all albums in background
-            var allAlbums: [Album] = []
-            var albumOffset = 0
-            let fetchLimit = 200
-            var hasMore = true
-            var batchCount = 0
-
-            await MainActor.run {
-                self.hydrationStatus = "Loading albums..."
-            }
-
-            while hasMore { // No limit - fetch all albums
-                let result = try await client.sendCommand(
-                    command: "music/albums/library_items",
-                    args: [
-                        "limit": fetchLimit,
-                        "offset": albumOffset,
-                        "order_by": "name"
-                    ]
-                )
-
-                if let result = result {
-                    let batch = parseAlbums(from: result)
-                    allAlbums.append(contentsOf: batch)
-                    albumOffset += batch.count
-                    hasMore = batch.count == fetchLimit
-                    batchCount += 1
-
-                    // Update progress (albums = 50% of total work)
-                    let albumProgress = min(Double(batchCount) / 50.0, 1.0) * 0.5
-                    await MainActor.run {
-                        self.hydrationProgress = albumProgress
-                        self.hydrationStatus = "Loading albums (\(allAlbums.count))..."
-                    }
-
-                    print("📦 [LibraryService] Background: fetched \(allAlbums.count) albums so far...")
-                } else {
-                    hasMore = false
-                }
-            }
-
-            print("✅ [LibraryService] Background: fetched \(allAlbums.count) total albums")
-
-            // Build artist -> album count mapping
-            var artistAlbumCounts: [String: Int] = [:]
-            for album in allAlbums {
-                artistAlbumCounts[album.artist, default: 0] += 1
-            }
-
-            // Fetch all artists
-            var allArtists: [Artist] = []
-            var artistOffset = 0
-            hasMore = true
-            batchCount = 0
-
-            await MainActor.run {
-                self.hydrationStatus = "Loading artists..."
-            }
-
-            while hasMore { // No limit - fetch all artists
-                let result = try await client.sendCommand(
-                    command: "music/artists/library_items",
-                    args: [
-                        "limit": fetchLimit,
-                        "offset": artistOffset,
-                        "order_by": "name"
-                    ]
-                )
-
-                if let result = result {
-                    let batch = parseArtists(from: result)
-                    allArtists.append(contentsOf: batch)
-                    artistOffset += batch.count
-                    hasMore = batch.count == fetchLimit
-                    batchCount += 1
-
-                    // Update progress (artists = remaining 50% of work)
-                    let artistProgress = 0.5 + (min(Double(batchCount) / 25.0, 1.0) * 0.5)
-                    await MainActor.run {
-                        self.hydrationProgress = artistProgress
-                        self.hydrationStatus = "Loading artists (\(allArtists.count))..."
-                    }
-
-                    print("👤 [LibraryService] Background: fetched \(allArtists.count) artists so far...")
-                } else {
-                    hasMore = false
-                }
-            }
-
-            print("✅ [LibraryService] Background: fetched \(allArtists.count) total artists")
-
-            // Hydrate artists with album counts
-            let hydratedArtists = allArtists.map { artist in
-                let albumCount = artistAlbumCounts[artist.name] ?? 0
-                return Artist(
-                    id: artist.id,
-                    name: artist.name,
-                    artworkURL: artist.artworkURL,
-                    albumCount: albumCount
-                )
-            }
-
-            // Cache the results
-            cache.set(hydratedArtists, forKey: cacheKey)
-            print("✅ [LibraryService] Background hydration complete! Cached \(hydratedArtists.count) artists with album counts")
-
-            // Update UI if we're on the artists view
-            await MainActor.run {
-                self.hydrationProgress = 1.0
-                self.hydrationStatus = "Complete!"
-
-                if self.artists.isEmpty || self.artists.allSatisfy({ $0.albumCount == 0 }) {
-                    self.artists = hydratedArtists
-                    print("🔄 [LibraryService] Updated UI with hydrated artists")
-                }
-
-                // Clear progress after a moment
-                Task {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                    await MainActor.run {
-                        self.hydrationProgress = nil
-                        self.hydrationStatus = nil
-                    }
-                }
-            }
-
-        } catch {
-            print("❌ [LibraryService] Background hydration error: \(error.localizedDescription)")
-            await MainActor.run {
-                self.hydrationProgress = nil
-                self.hydrationStatus = "Failed"
-            }
-        }
-    }
-
-    func hydrateLibrary(forceRefresh: Bool = false) async throws {
+    // MARK: - Event Subscription
+    
+    /// Subscribe to media item events for reactive library updates
+    func subscribeToLibraryEvents() {
+        eventTask?.cancel()
+        
         guard let client = client else {
-            let error = LibraryError.noClientAvailable
-            lastError = error
-            AppLogger.network.error("❌ Hydration failed: no client available")
-            throw error
-        }
-
-        // Check if we have cached hydrated data
-        let cacheKey = "hydrated_library_artists"
-        if !forceRefresh, let cached: [Artist] = cache.get(forKey: cacheKey) {
-            AppLogger.network.info("✅ Using cached hydrated library data (\(cached.count) artists)")
-            self.artists = cached
+            AppLogger.network.warning("No client available for library event subscription")
             return
         }
-
-        do {
-            print("🔄 [LibraryService] Starting library hydration...")
-            AppLogger.network.info("🔄 Starting library hydration...")
-
-            // Fetch all albums to build artist -> album count mapping
-            var allAlbums: [Album] = []
-            var albumOffset = 0
-            let fetchLimit = 200 // Larger batches for hydration
-            var hasMore = true
-
-            while hasMore {
-                AppLogger.network.debug("Fetching albums batch: offset=\(albumOffset)")
-
-                let result = try await client.sendCommand(
-                    command: "music/albums/library_items",
-                    args: [
-                        "limit": fetchLimit,
-                        "offset": albumOffset,
-                        "order_by": "name"
-                    ]
-                )
-
-                if let result = result {
-                    let batch = parseAlbums(from: result)
-                    allAlbums.append(contentsOf: batch)
-                    albumOffset += batch.count
-                    hasMore = batch.count == fetchLimit
-                    AppLogger.network.debug("Fetched \(batch.count) albums, total: \(allAlbums.count)")
-                } else {
-                    AppLogger.network.warning("⚠️ Albums API returned nil, stopping album fetch")
-                    hasMore = false
+        
+        eventTask = Task { [weak self] in
+            AppLogger.network.info("📡 Subscribing to library events...")
+            
+            let eventStream = await client.events.mediaItemUpdates.values
+            
+            for await event in eventStream {
+                await MainActor.run { [weak self] in
+                    self?.handleMediaItemEvent(event)
                 }
             }
-
-            AppLogger.network.info("✅ Fetched \(allAlbums.count) total albums")
-
-            // Build artist ID -> album count mapping
-            var artistAlbumCounts: [String: Int] = [:]
-            for album in allAlbums {
-                // Need to map album.artist (string) to artist IDs
-                // This is a limitation - we'll count by artist name for now
-                artistAlbumCounts[album.artist, default: 0] += 1
-            }
-
-            AppLogger.network.debug("Built album count map for \(artistAlbumCounts.count) unique artists")
-
-            // Fetch all artists
-            var allArtists: [Artist] = []
-            var artistOffset = 0
-            hasMore = true
-
-            while hasMore {
-                AppLogger.network.debug("Fetching artists batch: offset=\(artistOffset)")
-
-                let result = try await client.sendCommand(
-                    command: "music/artists/library_items",
-                    args: [
-                        "limit": fetchLimit,
-                        "offset": artistOffset,
-                        "order_by": "name"
-                    ]
-                )
-
-                if let result = result {
-                    let batch = parseArtists(from: result)
-                    allArtists.append(contentsOf: batch)
-                    artistOffset += batch.count
-                    hasMore = batch.count == fetchLimit
-                    AppLogger.network.debug("Fetched \(batch.count) artists, total: \(allArtists.count)")
-                } else {
-                    AppLogger.network.warning("⚠️ Artists API returned nil, stopping artist fetch")
-                    hasMore = false
-                }
-            }
-
-            AppLogger.network.info("✅ Fetched \(allArtists.count) total artists")
-
-            // Hydrate artists with correct album counts
-            let hydratedArtists = allArtists.map { artist in
-                let albumCount = artistAlbumCounts[artist.name] ?? 0
-                return Artist(
-                    id: artist.id,
-                    name: artist.name,
-                    artworkURL: artist.artworkURL,
-                    albumCount: albumCount
-                )
-            }
-
-            print("✅ [LibraryService] Library hydration complete! \(hydratedArtists.count) artists with album counts")
-            AppLogger.network.info("✅ Library hydration complete! \(hydratedArtists.count) artists with album counts")
-
-            // Update state and cache
-            self.artists = hydratedArtists
-            cache.set(hydratedArtists, forKey: cacheKey)
-            lastError = nil
-
-        } catch let error as LibraryError {
-            print("❌ [LibraryService] Hydration error (LibraryError): \(error.localizedDescription)")
-            AppLogger.errors.logError(error, context: "hydrateLibrary")
-            lastError = error
-            throw error
-        } catch {
-            print("❌ [LibraryService] Hydration error (generic): \(error.localizedDescription)")
-            let libError = LibraryError.networkError(error.localizedDescription)
-            AppLogger.errors.logError(error, context: "hydrateLibrary")
-            lastError = libError
-            throw libError
         }
     }
+    
+    private func handleMediaItemEvent(_ event: MediaItemEvent) {
+        AppLogger.network.debug("📥 Library event: \(event.action.rawValue) \(event.mediaType.rawValue) \(event.itemId ?? "unknown")")
+        
+        switch event.action {
+        case .added, .updated:
+            updateItem(from: event)
+        case .deleted:
+            deleteItem(from: event)
+        case .played:
+            AppLogger.network.debug("🎵 Played: \(event.itemId ?? "unknown")")
+        }
+    }
+    
+    private func updateItem(from event: MediaItemEvent) {
+        switch event.mediaType {
+        case .artist:
+            if let artist = parseArtist(from: event.data) {
+                artistsDict[artist.id] = artist
+            }
+        case .album:
+            if let album = parseAlbum(from: event.data) {
+                albumsDict[album.id] = album
+            }
+        case .track:
+            if let track = parseTrack(from: event.data) {
+                tracksDict[track.id] = track
+            }
+        case .playlist:
+            if let playlist = parsePlaylist(from: event.data) {
+                playlistsDict[playlist.id] = playlist
+            }
+        case .radio:
+            if let radio = parseRadio(from: event.data) {
+                radiosDict[radio.id] = radio
+            }
+        case .unknown:
+            break
+        }
+    }
+    
+    private func deleteItem(from event: MediaItemEvent) {
+        guard let itemId = event.itemId else { return }
+        
+        switch event.mediaType {
+        case .artist:
+            artistsDict.removeValue(forKey: itemId)
+        case .album:
+            albumsDict.removeValue(forKey: itemId)
+        case .track:
+            tracksDict.removeValue(forKey: itemId)
+        case .playlist:
+            playlistsDict.removeValue(forKey: itemId)
+        case .radio:
+            radiosDict.removeValue(forKey: itemId)
+        case .unknown:
+            break
+        }
+    }
+    
+    // MARK: - Single Item Parsers (for events)
+    
+    private func parseArtist(from data: [String: AnyCodable]) -> Artist? {
+        guard let id = data["item_id"]?.value as? String,
+              let name = data["name"]?.value as? String else {
+            return nil
+        }
+        
+        let artworkURL: URL?
+        if let metadata = data["metadata"]?.value as? [String: Any],
+           let imageURLString = metadata["image"] as? String {
+            artworkURL = URL(string: imageURLString)
+        } else {
+            artworkURL = nil
+        }
+        
+        let albumCount = data["album_count"]?.value as? Int ?? 0
+        
+        return Artist(id: id, name: name, artworkURL: artworkURL, albumCount: albumCount)
+    }
+    
+    private func parseAlbum(from data: [String: AnyCodable]) -> Album? {
+        guard let id = data["item_id"]?.value as? String,
+              let title = data["name"]?.value as? String else {
+            return nil
+        }
+        
+        let artist: String
+        if let artistName = data["artist"]?.value as? String {
+            artist = artistName
+        } else if let artists = data["artists"]?.value as? [[String: Any]],
+                  let firstArtist = artists.first,
+                  let artistName = firstArtist["name"] as? String {
+            artist = artistName
+        } else {
+            artist = "Unknown Artist"
+        }
+        
+        let artworkURL: URL?
+        if let metadata = data["metadata"]?.value as? [String: Any],
+           let imageURLString = metadata["image"] as? String {
+            artworkURL = URL(string: imageURLString)
+        } else {
+            artworkURL = nil
+        }
+        
+        let trackCount = data["track_count"]?.value as? Int ?? 0
+        let year = data["year"]?.value as? Int
+        let duration = data["duration"]?.value as? Double ?? 0.0
+        
+        let albumType: AlbumType
+        if let typeString = data["album_type"]?.value as? String {
+            albumType = AlbumType(rawValue: typeString.lowercased()) ?? .unknown
+        } else if trackCount <= 3 {
+            albumType = .single
+        } else if trackCount <= 7 {
+            albumType = .ep
+        } else {
+            albumType = .album
+        }
+        
+        return Album(id: id, title: title, artist: artist, artworkURL: artworkURL,
+                     trackCount: trackCount, year: year, duration: duration, albumType: albumType)
+    }
+    
+    private func parseTrack(from data: [String: AnyCodable]) -> Track? {
+        guard let id = data["item_id"]?.value as? String,
+              let title = data["name"]?.value as? String else {
+            return nil
+        }
+        
+        let artist: String
+        if let artistName = data["artist"]?.value as? String {
+            artist = artistName
+        } else if let artists = data["artists"]?.value as? [[String: Any]],
+                  let firstArtist = artists.first,
+                  let artistName = firstArtist["name"] as? String {
+            artist = artistName
+        } else {
+            artist = "Unknown Artist"
+        }
+        
+        let album: String
+        if let albumDict = data["album"]?.value as? [String: Any],
+           let albumName = albumDict["name"] as? String {
+            album = albumName
+        } else if let albumName = data["album"]?.value as? String {
+            album = albumName
+        } else {
+            album = "Unknown Album"
+        }
+        
+        let artworkURL: URL?
+        if let metadata = data["metadata"]?.value as? [String: Any],
+           let imageURLString = metadata["image"] as? String {
+            artworkURL = URL(string: imageURLString)
+        } else {
+            artworkURL = nil
+        }
+        
+        let duration = data["duration"]?.value as? Double ?? 0.0
+        
+        return Track(id: id, title: title, artist: artist, album: album,
+                     duration: duration, artworkURL: artworkURL)
+    }
+    
+    private func parsePlaylist(from data: [String: AnyCodable]) -> Playlist? {
+        guard let id = data["item_id"]?.value as? String,
+              let name = data["name"]?.value as? String else {
+            return nil
+        }
+        
+        let artworkURL: URL?
+        if let metadata = data["metadata"]?.value as? [String: Any],
+           let imageURLString = metadata["image"] as? String {
+            artworkURL = URL(string: imageURLString)
+        } else {
+            artworkURL = nil
+        }
+        
+        let trackCount = data["track_count"]?.value as? Int ?? 0
+        let duration = data["duration"]?.value as? Double ?? 0.0
+        let owner = data["owner"]?.value as? String
+        
+        return Playlist(id: id, name: name, artworkURL: artworkURL,
+                        trackCount: trackCount, duration: duration, owner: owner)
+    }
+    
+    private func parseRadio(from data: [String: AnyCodable]) -> Radio? {
+        guard let id = data["item_id"]?.value as? String,
+              let name = data["name"]?.value as? String else {
+            return nil
+        }
+        
+        let artworkURL: URL?
+        if let metadata = data["metadata"]?.value as? [String: Any],
+           let imageURLString = metadata["image"] as? String {
+            artworkURL = URL(string: imageURLString)
+        } else {
+            artworkURL = nil
+        }
+        
+        let provider = data["provider"]?.value as? String
+        
+        return Radio(id: id, name: name, artworkURL: artworkURL, provider: provider)
+    }
+
 
     // MARK: - Task 6: Fetch Artists (with Task 7 pagination and Task 8 sorting/filtering)
 
@@ -362,7 +308,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Artist] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached artists (sort: \(sortBy.rawValue), filter: \(filterKey))")
-            self.artists = cached
+            cached.forEach { artistsDict[$0.id] = $0 }
             return
         }
 
@@ -390,12 +336,12 @@ class LibraryService: ObservableObject {
                 // Since class is @MainActor, we're already on MainActor
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.artists = parsedArtists
+                    parsedArtists.forEach { artistsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedArtists, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
-                    self.artists.append(contentsOf: parsedArtists)
+                    parsedArtists.forEach { artistsDict[$0.id] = $0 }
                 }
 
                 // Update pagination state
@@ -403,7 +349,7 @@ class LibraryService: ObservableObject {
                 self.hasMoreItems = parsedArtists.count == fetchLimit
                 lastError = nil
             } else {
-                self.artists = []
+                artistsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -482,7 +428,7 @@ class LibraryService: ObservableObject {
            let cached: [Album] = cache.get(forKey: cacheKey) {
             print("💾 [LibraryService] Using cached albums for artist \(artistKey): \(cached.count) albums")
             AppLogger.network.debug("Using cached albums (artist: \(artistKey), sort: \(sortBy.rawValue))")
-            self.albums = cached
+            cached.forEach { albumsDict[$0.id] = $0 }
             return
         }
 
@@ -513,12 +459,12 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.albums = parsedAlbums
+                    parsedAlbums.forEach { albumsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedAlbums, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
-                    self.albums.append(contentsOf: parsedAlbums)
+                    parsedAlbums.forEach { albumsDict[$0.id] = $0 }
                 }
 
                 // Update pagination state
@@ -527,7 +473,7 @@ class LibraryService: ObservableObject {
 
                 lastError = nil
             } else {
-                self.albums = []
+                albumsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -645,7 +591,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Playlist] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached playlists (sort: \(sortBy.rawValue))")
-            self.playlists = cached
+            cached.forEach { playlistsDict[$0.id] = $0 }
             return
         }
 
@@ -672,12 +618,12 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.playlists = parsedPlaylists
+                    parsedPlaylists.forEach { playlistsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedPlaylists, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
-                    self.playlists.append(contentsOf: parsedPlaylists)
+                    parsedPlaylists.forEach { playlistsDict[$0.id] = $0 }
                 }
 
                 // Update pagination state
@@ -686,7 +632,7 @@ class LibraryService: ObservableObject {
 
                 lastError = nil
             } else {
-                self.playlists = []
+                playlistsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -767,7 +713,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Track] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached tracks (album: \(albumKey), sort: \(sortBy.rawValue))")
-            self.tracks = cached
+            cached.forEach { tracksDict[$0.id] = $0 }
             return
         }
 
@@ -798,12 +744,12 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.tracks = parsedTracks
+                    parsedTracks.forEach { tracksDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedTracks, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
-                    self.tracks.append(contentsOf: parsedTracks)
+                    parsedTracks.forEach { tracksDict[$0.id] = $0 }
                 }
 
                 // Update pagination state
@@ -812,7 +758,7 @@ class LibraryService: ObservableObject {
 
                 lastError = nil
             } else {
-                self.tracks = []
+                tracksDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -912,7 +858,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Radio] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached radios (sort: \(sortBy.rawValue))")
-            self.radios = cached
+            cached.forEach { radiosDict[$0.id] = $0 }
             return
         }
 
@@ -939,12 +885,12 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.radios = parsedRadios
+                    parsedRadios.forEach { radiosDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedRadios, forKey: cacheKey)
                 } else {
                     // Subsequent pages - append
-                    self.radios.append(contentsOf: parsedRadios)
+                    parsedRadios.forEach { radiosDict[$0.id] = $0 }
                 }
 
                 // Update pagination state
@@ -953,7 +899,7 @@ class LibraryService: ObservableObject {
 
                 lastError = nil
             } else {
-                self.radios = []
+                radiosDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -978,7 +924,7 @@ class LibraryService: ObservableObject {
 
         guard !query.isEmpty else {
             // Empty query - clear results
-            self.radios = []
+            radiosDict.removeAll()
             return
         }
 
@@ -996,11 +942,11 @@ class LibraryService: ObservableObject {
 
             if let result = result {
                 let parsedRadios = parseRadios(from: result)
-                self.radios = parsedRadios
+                parsedRadios.forEach { radiosDict[$0.id] = $0 }
                 self.hasMoreItems = false // Search results don't paginate
                 lastError = nil
             } else {
-                self.radios = []
+                radiosDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -1247,15 +1193,15 @@ class LibraryService: ObservableObject {
                 // Parse results based on category
                 switch category {
                 case .artists:
-                    self.artists = parseArtists(from: result)
+                    parseArtists(from: result).forEach { artistsDict[$0.id] = $0 }
                 case .albums:
-                    self.albums = parseAlbums(from: result)
+                    parseAlbums(from: result).forEach { albumsDict[$0.id] = $0 }
                 case .tracks:
-                    self.tracks = parseTracks(from: result)
+                    parseTracks(from: result).forEach { tracksDict[$0.id] = $0 }
                 case .playlists:
-                    self.playlists = parsePlaylists(from: result)
+                    parsePlaylists(from: result).forEach { playlistsDict[$0.id] = $0 }
                 case .radio:
-                    self.radios = parseRadios(from: result)
+                    parseRadios(from: result).forEach { radiosDict[$0.id] = $0 }
                 case .genres:
                     self.genres = parseGenres(from: result)
                 }
@@ -1379,7 +1325,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Artist] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached favorite artists (sort: \(sortBy.rawValue), filter: \(filterKey))")
-            self.artists = cached
+            cached.forEach { artistsDict[$0.id] = $0 }
             return
         }
 
@@ -1406,18 +1352,18 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.artists = parsedArtists
+                    parsedArtists.forEach { artistsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedArtists, forKey: cacheKey)
                 } else {
-                    self.artists.append(contentsOf: parsedArtists)
+                    parsedArtists.forEach { artistsDict[$0.id] = $0 }
                 }
 
                 self.currentOffset = fetchOffset + parsedArtists.count
                 self.hasMoreItems = parsedArtists.count == fetchLimit
                 lastError = nil
             } else {
-                self.artists = []
+                artistsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -1466,7 +1412,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Album] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached favorite albums (sort: \(sortBy.rawValue), filter: \(filterKey))")
-            self.albums = cached
+            cached.forEach { albumsDict[$0.id] = $0 }
             return
         }
 
@@ -1493,18 +1439,18 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.albums = parsedAlbums
+                    parsedAlbums.forEach { albumsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedAlbums, forKey: cacheKey)
                 } else {
-                    self.albums.append(contentsOf: parsedAlbums)
+                    parsedAlbums.forEach { albumsDict[$0.id] = $0 }
                 }
 
                 self.currentOffset = fetchOffset + parsedAlbums.count
                 self.hasMoreItems = parsedAlbums.count == fetchLimit
                 lastError = nil
             } else {
-                self.albums = []
+                albumsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -1553,7 +1499,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Track] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached favorite tracks (sort: \(sortBy.rawValue), filter: \(filterKey))")
-            self.tracks = cached
+            cached.forEach { tracksDict[$0.id] = $0 }
             return
         }
 
@@ -1580,18 +1526,18 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.tracks = parsedTracks
+                    parsedTracks.forEach { tracksDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedTracks, forKey: cacheKey)
                 } else {
-                    self.tracks.append(contentsOf: parsedTracks)
+                    parsedTracks.forEach { tracksDict[$0.id] = $0 }
                 }
 
                 self.currentOffset = fetchOffset + parsedTracks.count
                 self.hasMoreItems = parsedTracks.count == fetchLimit
                 lastError = nil
             } else {
-                self.tracks = []
+                tracksDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -1640,7 +1586,7 @@ class LibraryService: ObservableObject {
         if !forceRefresh && fetchOffset == 0,
            let cached: [Playlist] = cache.get(forKey: cacheKey) {
             AppLogger.network.debug("Using cached favorite playlists (sort: \(sortBy.rawValue), filter: \(filterKey))")
-            self.playlists = cached
+            cached.forEach { playlistsDict[$0.id] = $0 }
             return
         }
 
@@ -1667,18 +1613,18 @@ class LibraryService: ObservableObject {
 
                 if offset == 0 || offset == nil && currentOffset == 0 {
                     // First page - replace
-                    self.playlists = parsedPlaylists
+                    parsedPlaylists.forEach { playlistsDict[$0.id] = $0 }
                     // Cache first page results
                     cache.set(parsedPlaylists, forKey: cacheKey)
                 } else {
-                    self.playlists.append(contentsOf: parsedPlaylists)
+                    parsedPlaylists.forEach { playlistsDict[$0.id] = $0 }
                 }
 
                 self.currentOffset = fetchOffset + parsedPlaylists.count
                 self.hasMoreItems = parsedPlaylists.count == fetchLimit
                 lastError = nil
             } else {
-                self.playlists = []
+                playlistsDict.removeAll()
                 self.hasMoreItems = false
                 lastError = nil
             }
@@ -1720,10 +1666,10 @@ class LibraryService: ObservableObject {
             )
 
             if let result = result {
-                self.tracks = parseTracks(from: result)
+                parseTracks(from: result).forEach { tracksDict[$0.id] = $0 }
                 lastError = nil
             } else {
-                self.tracks = []
+                tracksDict.removeAll()
                 lastError = nil
             }
         } catch let error as LibraryError {
