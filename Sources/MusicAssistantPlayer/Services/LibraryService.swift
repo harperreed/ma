@@ -9,15 +9,15 @@ import os.log
 
 @MainActor
 class LibraryService: ObservableObject {
-    @Published private(set) var artistsDict: [String: Artist] = [:]
+    @Published var artistsDict: [String: Artist] = [:]
     var artists: [Artist] { artistsDict.values.sorted { $0.name < $1.name } }
-    @Published private(set) var albumsDict: [String: Album] = [:]
+    @Published var albumsDict: [String: Album] = [:]
     var albums: [Album] { albumsDict.values.sorted { $0.title < $1.title } }
-    @Published private(set) var playlistsDict: [String: Playlist] = [:]
+    @Published var playlistsDict: [String: Playlist] = [:]
     var playlists: [Playlist] { playlistsDict.values.sorted { $0.name < $1.name } }
-    @Published private(set) var tracksDict: [String: Track] = [:]
+    @Published var tracksDict: [String: Track] = [:]
     var tracks: [Track] { tracksDict.values.sorted { $0.title < $1.title } }
-    @Published private(set) var radiosDict: [String: Radio] = [:]
+    @Published var radiosDict: [String: Radio] = [:]
     var radios: [Radio] { radiosDict.values.sorted { $0.name < $1.name } }
     @Published var genres: [Genre] = []
     @Published var providers: [String] = []
@@ -42,27 +42,54 @@ class LibraryService: ObservableObject {
         eventTask?.cancel()
     }
 
+    /// Update the client reference and resubscribe to events
+    /// Call this when reconnecting to a different server
+    func updateClient(_ newClient: MusicAssistantClient?) {
+        AppLogger.network.info("🔄 Updating LibraryService client reference")
+        eventTask?.cancel()
+        self.client = newClient
+        subscribeToLibraryEvents()
+    }
+
+    /// Clear all library data
+    /// Call this when disconnecting from server to prevent showing stale data
+    func clearAll() {
+        AppLogger.network.info("🧹 Clearing all library data")
+        artistsDict.removeAll()
+        albumsDict.removeAll()
+        playlistsDict.removeAll()
+        tracksDict.removeAll()
+        radiosDict.removeAll()
+        genres.removeAll()
+        providers.removeAll()
+        lastError = nil
+        hasMoreItems = false
+        currentOffset = 0
+    }
+
     // MARK: - Event Subscription
     
     /// Subscribe to media item events for reactive library updates
     func subscribeToLibraryEvents() {
         eventTask?.cancel()
-        
+
         guard let client = client else {
             AppLogger.network.warning("No client available for library event subscription")
             return
         }
-        
+
         eventTask = Task { [weak self] in
             AppLogger.network.info("📡 Subscribing to library events...")
-            
+
             let eventStream = await client.events.mediaItemUpdates.values
-            
+
             for await event in eventStream {
                 await MainActor.run { [weak self] in
                     self?.handleMediaItemEvent(event)
                 }
             }
+
+            AppLogger.network.warning("📡 Library event stream ended normally")
         }
     }
     
