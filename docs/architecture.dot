@@ -1,0 +1,299 @@
+// Music Assistant Player - Architecture Diagram
+// A native macOS client for Music Assistant with Roon-inspired interface
+// Generated from project analysis
+
+digraph MusicAssistantPlayer {
+    // Graph styling
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="SF Pro", fontsize=10];
+    edge [fontname="SF Pro", fontsize=9, color="#666666"];
+
+    // Color scheme
+    bgcolor="#FAFAFA";
+
+    // Subgraphs for logical grouping
+
+    // ==================== APP ENTRY ====================
+    subgraph cluster_app {
+        label="Application Entry";
+        style=filled;
+        fillcolor="#E3F2FD";
+        fontsize=12;
+        fontname="SF Pro";
+
+        App [label="MusicAssistantPlayerApp\n@main", fillcolor="#2196F3", fontcolor=white];
+        ServerSetup [label="ServerSetupView\nInitial Configuration", fillcolor="#64B5F6"];
+    }
+
+    // ==================== MACOS INTEGRATION ====================
+    subgraph cluster_macos {
+        label="macOS Integration";
+        style=filled;
+        fillcolor="#F3E5F5";
+        fontsize=12;
+
+        NowPlaying [label="PlayerService+NowPlaying\nMedia Keys & Control Center", fillcolor="#9C27B0", fontcolor=white];
+        MPRemoteCommandCenter [label="MPRemoteCommandCenter\nMedia Key Events", shape=ellipse, fillcolor="#BA68C8"];
+        MPNowPlayingInfoCenter [label="MPNowPlayingInfoCenter\nControl Center Display", shape=ellipse, fillcolor="#BA68C8"];
+
+        IntentHelper [label="IntentHelper\nSingleton Bridge", fillcolor="#9C27B0", fontcolor=white];
+        AppIntents [label="PlayerIntents\nPlay|Pause|Stop|Next|Previous", fillcolor="#AB47BC", fontcolor=white];
+        AppShortcuts [label="AppShortcutsProvider\nSiri Phrases", fillcolor="#AB47BC", fontcolor=white];
+
+        Siri [label="Siri / Shortcuts", shape=doubleoctagon, fillcolor="#CE93D8"];
+    }
+
+    // ==================== SERVICES LAYER ====================
+    subgraph cluster_services {
+        label="Services Layer";
+        style=filled;
+        fillcolor="#E8F5E9";
+        fontsize=12;
+
+        PlayerService [label="PlayerService\nPlayback State Management\n@MainActor", fillcolor="#4CAF50", fontcolor=white];
+        QueueService [label="QueueService\nQueue Management", fillcolor="#66BB6A", fontcolor=white];
+        LibraryService [label="LibraryService\nMedia Library Access", fillcolor="#66BB6A", fontcolor=white];
+        ImageCacheService [label="ImageCacheService\nArtwork Caching", fillcolor="#66BB6A", fontcolor=white];
+        LibraryCache [label="LibraryCache\nMetadata Caching", fillcolor="#81C784"];
+        EventParser [label="EventParser\nWebSocket Event Parsing", fillcolor="#81C784"];
+    }
+
+    // ==================== VIEWMODELS ====================
+    subgraph cluster_viewmodels {
+        label="ViewModels (MVVM)";
+        style=filled;
+        fillcolor="#FFF3E0";
+        fontsize=12;
+
+        NowPlayingVM [label="NowPlayingViewModel\nNow Playing UI State\n@ObservableObject", fillcolor="#FF9800", fontcolor=white];
+        QueueVM [label="QueueViewModel\nQueue UI State\n@ObservableObject", fillcolor="#FFB74D"];
+        LibraryVM [label="LibraryViewModel\nLibrary UI State\n@ObservableObject", fillcolor="#FFB74D"];
+    }
+
+    // ==================== VIEWS ====================
+    subgraph cluster_views {
+        label="Views (SwiftUI)";
+        style=filled;
+        fillcolor="#E1F5FE";
+        fontsize=12;
+
+        MainWindow [label="MainWindowView\nStandard Layout", fillcolor="#03A9F4", fontcolor=white];
+        RoonWindow [label="RoonStyleMainWindowView\nThree-Column Layout", fillcolor="#03A9F4", fontcolor=white];
+
+        subgraph cluster_view_components {
+            label="View Components";
+            style=filled;
+            fillcolor="#B3E5FC";
+
+            NowPlayingView [label="NowPlayingView\nPlayback Display"];
+            QueueView [label="QueueView\nQueue Display"];
+            LibraryView [label="LibraryBrowseView\nBrowse | Artists | Albums"];
+            SidebarView [label="SidebarView\nPlayer Selection"];
+            MiniPlayerBar [label="MiniPlayerBar\nCompact Controls"];
+
+            PlayerControls [label="PlayerControlsView\nTransport Controls"];
+            AlbumArt [label="AlbumArtView\nArtwork Display"];
+            VolumeControl [label="VolumeControl\nVolume Slider"];
+            ProgressBar [label="SeekableProgressBar\nPlayback Progress"];
+            ErrorBanner [label="ErrorBanner\nError Display"];
+        }
+    }
+
+    // ==================== MODELS ====================
+    subgraph cluster_models {
+        label="Models (Domain)";
+        style=filled;
+        fillcolor="#FCE4EC";
+        fontsize=12;
+
+        Track [label="Track\nid|title|artist|album|duration", fillcolor="#E91E63", fontcolor=white];
+        Player [label="Player\nid|name|state|volume", fillcolor="#EC407A", fontcolor=white];
+        Album [label="Album\nid|title|artist|artworkURL", fillcolor="#F06292"];
+        Artist [label="Artist\nid|name", fillcolor="#F06292"];
+        Playlist [label="Playlist\nid|name|tracks", fillcolor="#F06292"];
+        Radio [label="Radio\nStreaming Station", fillcolor="#F06292"];
+        Genre [label="Genre\nClassification", fillcolor="#F06292"];
+
+        PlaybackState [label="PlaybackState\nplaying|paused|stopped", shape=ellipse, fillcolor="#F8BBD0"];
+        ConnectionState [label="ConnectionState\nconnected|disconnected", shape=ellipse, fillcolor="#F8BBD0"];
+        ServerConfig [label="ServerConfig\nhost|port", shape=ellipse, fillcolor="#F8BBD0"];
+    }
+
+    // ==================== ERRORS ====================
+    subgraph cluster_errors {
+        label="Error Handling";
+        style=filled;
+        fillcolor="#FFEBEE";
+        fontsize=12;
+
+        PlayerError [label="PlayerError\nDomain Errors", fillcolor="#F44336", fontcolor=white];
+        QueueError [label="QueueError\nQueue Errors", fillcolor="#EF5350", fontcolor=white];
+        LibraryError [label="LibraryError\nLibrary Errors", fillcolor="#EF5350", fontcolor=white];
+    }
+
+    // ==================== UTILITIES ====================
+    subgraph cluster_utilities {
+        label="Utilities";
+        style=filled;
+        fillcolor="#F5F5F5";
+        fontsize=12;
+
+        AppLogger [label="AppLogger\nnetwork|player|ui|cache|errors|intents", fillcolor="#757575", fontcolor=white];
+        ColorExtractor [label="ColorExtractor\nDynamic Colors", fillcolor="#9E9E9E"];
+        NetworkValidator [label="NetworkValidator\nURL Validation", fillcolor="#9E9E9E"];
+        BlurredBackground [label="BlurredArtworkBackground\nVisual Effects", fillcolor="#9E9E9E"];
+    }
+
+    // ==================== EXTERNAL ====================
+    subgraph cluster_external {
+        label="External Dependencies";
+        style=filled;
+        fillcolor="#ECEFF1";
+        fontsize=12;
+
+        MusicAssistantKit [label="MusicAssistantKit\nMusicAssistantClient\nWebSocket API", shape=component, fillcolor="#607D8B", fontcolor=white];
+        MediaPlayer [label="MediaPlayer.framework\nMPRemoteCommandCenter\nMPNowPlayingInfoCenter", shape=component, fillcolor="#78909C"];
+        AppIntentsFramework [label="AppIntents.framework\nSiri & Shortcuts", shape=component, fillcolor="#78909C"];
+    }
+
+    // ==================== DATA FLOW & RELATIONSHIPS ====================
+
+    // App Entry → Windows
+    App -> ServerSetup [label="initial launch"];
+    App -> MainWindow [label="creates", style=bold];
+    App -> RoonWindow [label="creates", style=bold];
+    App -> MusicAssistantKit [label="initializes client"];
+
+    // Main Windows → ViewModels
+    MainWindow -> NowPlayingVM [label="@StateObject"];
+    MainWindow -> QueueVM [label="@StateObject"];
+    MainWindow -> LibraryVM [label="@StateObject"];
+
+    RoonWindow -> NowPlayingVM [label="@StateObject"];
+    RoonWindow -> QueueVM [label="@StateObject"];
+    RoonWindow -> LibraryVM [label="@StateObject"];
+
+    // Windows → IntentHelper Wiring
+    MainWindow -> IntentHelper [label="wires PlayerService", style=dashed, color="#9C27B0"];
+    RoonWindow -> IntentHelper [label="wires PlayerService", style=dashed, color="#9C27B0"];
+
+    // ViewModels → Services
+    NowPlayingVM -> PlayerService [label="observes via Combine", style=bold, color="#FF9800"];
+    QueueVM -> QueueService [label="observes"];
+    LibraryVM -> LibraryService [label="observes"];
+
+    // Services → Client
+    PlayerService -> MusicAssistantKit [label="play|pause|stop|next|previous"];
+    QueueService -> MusicAssistantKit [label="queue operations"];
+    LibraryService -> MusicAssistantKit [label="fetch library"];
+
+    // Services → Event Parsing
+    PlayerService -> EventParser [label="parses WebSocket events"];
+    QueueService -> EventParser [label="parses events"];
+
+    // Services → Models
+    PlayerService -> Track [label="manages"];
+    PlayerService -> Player [label="manages"];
+    PlayerService -> PlaybackState [label="publishes"];
+    PlayerService -> ConnectionState [label="publishes"];
+
+    QueueService -> Track [label="manages queue"];
+
+    LibraryService -> Album [label="fetches"];
+    LibraryService -> Artist [label="fetches"];
+    LibraryService -> Playlist [label="fetches"];
+    LibraryService -> Radio [label="fetches"];
+    LibraryService -> Genre [label="fetches"];
+    LibraryService -> LibraryCache [label="uses"];
+
+    // Services → Errors
+    PlayerService -> PlayerError [label="throws"];
+    QueueService -> QueueError [label="throws"];
+    LibraryService -> LibraryError [label="throws"];
+
+    // macOS Integration → PlayerService
+    NowPlaying -> PlayerService [label="extends", style=bold, color="#9C27B0"];
+    NowPlaying -> MPRemoteCommandCenter [label="registers handlers", color="#9C27B0"];
+    NowPlaying -> MPNowPlayingInfoCenter [label="updates info", color="#9C27B0"];
+
+    MPRemoteCommandCenter -> NowPlaying [label="media key events", dir=back, color="#9C27B0"];
+    NowPlaying -> MediaPlayer [label="uses framework", style=dashed];
+
+    // App Intents Flow
+    AppIntents -> IntentHelper [label="accesses PlayerService via", color="#9C27B0"];
+    IntentHelper -> PlayerService [label="weak reference", style=dashed, color="#9C27B0"];
+    AppShortcuts -> AppIntents [label="registers", color="#9C27B0"];
+    App -> AppShortcuts [label="provides", color="#9C27B0"];
+    Siri -> AppIntents [label="invokes", color="#9C27B0"];
+    AppIntents -> AppIntentsFramework [label="uses framework", style=dashed];
+
+    // Views → Components
+    NowPlayingView -> PlayerControls;
+    NowPlayingView -> AlbumArt;
+    NowPlayingView -> ProgressBar;
+
+    MainWindow -> NowPlayingView;
+    MainWindow -> QueueView;
+    MainWindow -> LibraryView;
+    MainWindow -> SidebarView;
+
+    RoonWindow -> NowPlayingView;
+    RoonWindow -> QueueView;
+    RoonWindow -> LibraryView;
+    RoonWindow -> SidebarView;
+    RoonWindow -> MiniPlayerBar;
+
+    MiniPlayerBar -> AlbumArt;
+    MiniPlayerBar -> PlayerControls;
+
+    PlayerControls -> VolumeControl;
+
+    // Views → ViewModels (Data Binding)
+    NowPlayingView -> NowPlayingVM [label="@ObservedObject", dir=back, style=dotted];
+    QueueView -> QueueVM [label="@ObservedObject", dir=back, style=dotted];
+    LibraryView -> LibraryVM [label="@ObservedObject", dir=back, style=dotted];
+
+    // Utilities
+    PlayerService -> AppLogger [label="logs"];
+    QueueService -> AppLogger [label="logs"];
+    LibraryService -> AppLogger [label="logs"];
+    NowPlaying -> AppLogger [label="logs"];
+    AppIntents -> AppLogger [label="logs"];
+
+    LibraryView -> ColorExtractor [label="extracts colors"];
+    AlbumArt -> ImageCacheService [label="fetches artwork"];
+    BlurredBackground -> AlbumArt [label="creates blur"];
+
+    ServerSetup -> NetworkValidator [label="validates URLs"];
+    ServerSetup -> ServerConfig [label="creates"];
+
+    // Error Handling Flow
+    PlayerError -> ErrorBanner [label="displays", dir=back, style=dotted, color="#F44336"];
+    MainWindow -> ErrorBanner;
+    RoonWindow -> ErrorBanner;
+
+    // Legend
+    subgraph cluster_legend {
+        label="Legend";
+        style=filled;
+        fillcolor="#FFFFFF";
+        fontsize=10;
+
+        node [shape=plaintext, fillcolor="#FFFFFF"];
+
+        legend [label=<
+            <table border="0" cellborder="0" cellspacing="0">
+                <tr><td align="left"><b>Data Flow:</b></td></tr>
+                <tr><td align="left">Solid: Direct dependency</td></tr>
+                <tr><td align="left">Dashed: Weak/indirect dependency</td></tr>
+                <tr><td align="left">Dotted: Reactive observation (Combine)</td></tr>
+                <tr><td align="left"></td></tr>
+                <tr><td align="left"><b>Architecture:</b></td></tr>
+                <tr><td align="left">SwiftUI + MVVM pattern</td></tr>
+                <tr><td align="left">Service layer with Combine publishers</td></tr>
+                <tr><td align="left">Native macOS integration</td></tr>
+                <tr><td align="left">WebSocket real-time updates</td></tr>
+            </table>
+        >];
+    }
+}

@@ -47,6 +47,45 @@ struct MusicAssistantPlayerApp: App {
                 }
                 .keyboardShortcut("q", modifiers: [.command, .shift])
             }
+
+            CommandMenu("Server") {
+                Button("Change Server...") {
+                    changeServer()
+                }
+                .keyboardShortcut("k", modifiers: [.command, .shift])
+
+                Divider()
+
+                if let config = serverConfig {
+                    Text("Connected to \(config.host):\(config.port)")
+                        .disabled(true)
+                } else {
+                    Text("Not connected")
+                        .disabled(true)
+                }
+            }
+        }
+    }
+
+    private func changeServer() {
+        AppLogger.ui.info("🔄 Changing server - disconnecting current client")
+
+        Task {
+            // Disconnect current client gracefully
+            if let client = client {
+                await client.disconnect()
+            }
+
+            // Clear state and config to show ServerSetupView
+            await MainActor.run {
+                self.client = nil
+                self.streamingPlayer = nil
+                self.serverConfig = nil
+            }
+
+            // Clear saved config from UserDefaults
+            ServerConfig.clear()
+            AppLogger.ui.info("✅ Cleared server config - showing setup view")
         }
     }
 

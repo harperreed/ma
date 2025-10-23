@@ -28,4 +28,8 @@ struct ServerConfig: Codable, Equatable {
         }
         return config
     }
+
+    static func clear(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: key)
+    }
 }
