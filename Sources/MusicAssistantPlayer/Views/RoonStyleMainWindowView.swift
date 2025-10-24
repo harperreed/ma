@@ -9,6 +9,8 @@ struct RoonStyleMainWindowView: View {
     let client: MusicAssistantClient
     let serverConfig: ServerConfig
     let streamingPlayer: StreamingPlayer
+    let onDisconnect: () -> Void
+    let onChangeServer: () -> Void
 
     // MARK: - Services
     @StateObject private var playerService: PlayerService
@@ -28,6 +30,7 @@ struct RoonStyleMainWindowView: View {
     @State private var isLibrarySidebarVisible: Bool = true
     @State private var playerUpdateTask: Task<Void, Never>?
     @State private var selectedLibraryCategory: LibraryCategory? = .artists
+    @State private var connectionState: ConnectionState = .connected
 
     // MARK: - Layout Constants
     private enum LayoutConstants {
@@ -40,10 +43,18 @@ struct RoonStyleMainWindowView: View {
     }
 
     // MARK: - Initialization
-    init(client: MusicAssistantClient, serverConfig: ServerConfig, streamingPlayer: StreamingPlayer) {
+    init(
+        client: MusicAssistantClient,
+        serverConfig: ServerConfig,
+        streamingPlayer: StreamingPlayer,
+        onDisconnect: @escaping () -> Void,
+        onChangeServer: @escaping () -> Void
+    ) {
         self.client = client
         self.serverConfig = serverConfig
         self.streamingPlayer = streamingPlayer
+        self.onDisconnect = onDisconnect
+        self.onChangeServer = onChangeServer
 
         // Create services
         let playerSvc = PlayerService(client: client, streamingPlayer: streamingPlayer)
@@ -197,13 +208,22 @@ struct RoonStyleMainWindowView: View {
 
     private var libraryBrowseView: some View {
         VStack(spacing: 0) {
-            // Header with back button (when coming from expanded now playing)
+            // Header with connection status and controls
             HStack {
                 Text(libraryViewModel.selectedCategory.displayName)
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
+
+                // Connection status indicator
+                ConnectionStatusIndicator(
+                    serverHost: serverConfig.host,
+                    serverPort: serverConfig.port,
+                    connectionState: connectionState,
+                    onDisconnect: onDisconnect,
+                    onChangeServer: onChangeServer
+                )
 
                 // Toggle sidebar button
                 Button(action: {
@@ -217,6 +237,7 @@ struct RoonStyleMainWindowView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Toggle Sidebar")
+                .padding(.leading, 8)
             }
             .padding()
 
@@ -515,6 +536,12 @@ struct RoonStyleMainWindowView: View {
     let client = MusicAssistantClient(host: config.host, port: config.port)
     let player = StreamingPlayer(client: client, playerName: "Preview Player")
 
-    return RoonStyleMainWindowView(client: client, serverConfig: config, streamingPlayer: player)
-        .frame(width: 1400, height: 900)
+    RoonStyleMainWindowView(
+        client: client,
+        serverConfig: config,
+        streamingPlayer: player,
+        onDisconnect: {},
+        onChangeServer: {}
+    )
+    .frame(width: 1400, height: 900)
 }

@@ -16,7 +16,13 @@ struct MusicAssistantPlayerApp: App {
         WindowGroup {
             Group {
                 if let config = serverConfig, let client = client, let streamingPlayer = streamingPlayer {
-                    RoonStyleMainWindowView(client: client, serverConfig: config, streamingPlayer: streamingPlayer)
+                    RoonStyleMainWindowView(
+                        client: client,
+                        serverConfig: config,
+                        streamingPlayer: streamingPlayer,
+                        onDisconnect: disconnectServer,
+                        onChangeServer: changeServer
+                    )
                 } else {
                     ServerSetupView { config in
                         self.serverConfig = config
