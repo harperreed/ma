@@ -30,7 +30,6 @@ struct RoonStyleMainWindowView: View {
     @State private var isLibrarySidebarVisible: Bool = true
     @State private var playerUpdateTask: Task<Void, Never>?
     @State private var selectedLibraryCategory: LibraryCategory? = .artists
-    @State private var streamingPlayerId: String? // Store the ID of our streaming player
 
     // MARK: - Layout Constants
     private enum LayoutConstants {
@@ -346,24 +345,28 @@ struct RoonStyleMainWindowView: View {
                     activeGroup: nil
                 )
                 allPlayers.insert(streamingPlayerModel, at: 0)
-
-                await MainActor.run {
-                    self.streamingPlayerId = playerId
-                }
             }
 
             await MainActor.run {
                 self.availablePlayers = allPlayers
 
-                // Auto-select StreamingPlayer (this device) by default
-                if let streamingId = self.streamingPlayerId,
-                   let streamingPlayer = allPlayers.first(where: { $0.id == streamingId }) {
-                    self.selectedPlayer = streamingPlayer
-                    self.playerService.selectedPlayer = streamingPlayer
+                // Log available players for debugging
+                AppLogger.network.debug("Available players:")
+                for player in allPlayers {
+                    AppLogger.network.debug("  - \(player.name) (id: \(player.id), active: \(player.isActive))")
+                }
+
+                // Auto-select "This device" player by default (case-insensitive search)
+                if let thisDevice = allPlayers.first(where: { $0.name.trimmingCharacters(in: .whitespaces).lowercased() == "this device" }) {
+                    AppLogger.network.info("Auto-selecting 'This device' player: \(thisDevice.name)")
+                    self.selectedPlayer = thisDevice
+                    self.playerService.selectedPlayer = thisDevice
                 } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
+                    AppLogger.network.info("No 'This device' found, selecting first active player: \(firstActive.name)")
                     self.selectedPlayer = firstActive
                     self.playerService.selectedPlayer = firstActive
                 } else if let first = allPlayers.first {
+                    AppLogger.network.info("No active players found, selecting first player: \(first.name)")
                     self.selectedPlayer = first
                     self.playerService.selectedPlayer = first
                 }
@@ -415,10 +418,6 @@ struct RoonStyleMainWindowView: View {
                     activeGroup: nil
                 )
                 allPlayers.insert(streamingPlayerModel, at: 0)
-
-                await MainActor.run {
-                    self.streamingPlayerId = playerId
-                }
             }
 
             await MainActor.run {
@@ -429,17 +428,19 @@ struct RoonStyleMainWindowView: View {
                    let updatedPlayer = allPlayers.first(where: { $0.id == currentlySelected.id }) {
                     self.selectedPlayer = updatedPlayer
                     self.playerService.selectedPlayer = updatedPlayer
-                } else if selectedPlayer != nil {
-                    // Previously selected player no longer exists, select a new one
-                    // Prefer StreamingPlayer (this device) by default
-                    if let streamingId = self.streamingPlayerId,
-                       let streamingPlayer = allPlayers.first(where: { $0.id == streamingId }) {
-                        self.selectedPlayer = streamingPlayer
-                        self.playerService.selectedPlayer = streamingPlayer
+                } else {
+                    // No player selected OR previously selected player no longer exists
+                    // Select a new one, preferring "This device"
+                    if let thisDevice = allPlayers.first(where: { $0.name.trimmingCharacters(in: .whitespaces).lowercased() == "this device" }) {
+                        AppLogger.network.info("Auto-selecting 'This device' player: \(thisDevice.name)")
+                        self.selectedPlayer = thisDevice
+                        self.playerService.selectedPlayer = thisDevice
                     } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
+                        AppLogger.network.info("No 'This device' found, selecting first active player: \(firstActive.name)")
                         self.selectedPlayer = firstActive
                         self.playerService.selectedPlayer = firstActive
                     } else if let first = allPlayers.first {
+                        AppLogger.network.info("No active players found, selecting first player: \(first.name)")
                         self.selectedPlayer = first
                         self.playerService.selectedPlayer = first
                     } else {
