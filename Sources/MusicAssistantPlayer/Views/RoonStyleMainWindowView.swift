@@ -30,6 +30,7 @@ struct RoonStyleMainWindowView: View {
     @State private var isLibrarySidebarVisible: Bool = true
     @State private var playerUpdateTask: Task<Void, Never>?
     @State private var selectedLibraryCategory: LibraryCategory? = .artists
+    @State private var streamingPlayerId: String? // Store the ID of our streaming player
 
     // MARK: - Layout Constants
     private enum LayoutConstants {
@@ -334,9 +335,9 @@ struct RoonStyleMainWindowView: View {
             }
 
             // Add StreamingPlayer to the list if it has been registered
-            if let streamingPlayerId = await streamingPlayer.currentPlayerId {
+            if let playerId = await streamingPlayer.currentPlayerId {
                 let streamingPlayerModel = Player(
-                    id: streamingPlayerId,
+                    id: playerId,
                     name: "Music Assistant Player",
                     isActive: true,
                     type: .player,
@@ -345,13 +346,18 @@ struct RoonStyleMainWindowView: View {
                     activeGroup: nil
                 )
                 allPlayers.insert(streamingPlayerModel, at: 0)
+
+                await MainActor.run {
+                    self.streamingPlayerId = playerId
+                }
             }
 
             await MainActor.run {
                 self.availablePlayers = allPlayers
 
-                // Auto-select StreamingPlayer if it's available, otherwise first active player
-                if let streamingPlayer = allPlayers.first(where: { $0.name == "Music Assistant Player" }) {
+                // Auto-select StreamingPlayer (this device) by default
+                if let streamingId = self.streamingPlayerId,
+                   let streamingPlayer = allPlayers.first(where: { $0.id == streamingId }) {
                     self.selectedPlayer = streamingPlayer
                     self.playerService.selectedPlayer = streamingPlayer
                 } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
@@ -398,9 +404,9 @@ struct RoonStyleMainWindowView: View {
             }
 
             // Add StreamingPlayer to the list if it has been registered
-            if let streamingPlayerId = await streamingPlayer.currentPlayerId {
+            if let playerId = await streamingPlayer.currentPlayerId {
                 let streamingPlayerModel = Player(
-                    id: streamingPlayerId,
+                    id: playerId,
                     name: "Music Assistant Player",
                     isActive: true,
                     type: .player,
@@ -409,6 +415,10 @@ struct RoonStyleMainWindowView: View {
                     activeGroup: nil
                 )
                 allPlayers.insert(streamingPlayerModel, at: 0)
+
+                await MainActor.run {
+                    self.streamingPlayerId = playerId
+                }
             }
 
             await MainActor.run {
@@ -421,7 +431,9 @@ struct RoonStyleMainWindowView: View {
                     self.playerService.selectedPlayer = updatedPlayer
                 } else if selectedPlayer != nil {
                     // Previously selected player no longer exists, select a new one
-                    if let streamingPlayer = allPlayers.first(where: { $0.name == "Music Assistant Player" }) {
+                    // Prefer StreamingPlayer (this device) by default
+                    if let streamingId = self.streamingPlayerId,
+                       let streamingPlayer = allPlayers.first(where: { $0.id == streamingId }) {
                         self.selectedPlayer = streamingPlayer
                         self.playerService.selectedPlayer = streamingPlayer
                     } else if let firstActive = allPlayers.first(where: { $0.isActive }) {
