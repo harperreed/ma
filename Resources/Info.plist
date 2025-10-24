@@ -34,5 +34,22 @@
     <true/>
     <key>NSSupportsSuddenTermination</key>
     <true/>
+    <!-- App Transport Security: Allow insecure HTTP/WebSocket connections -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+    <!-- Local Network Privacy: Required for macOS 14+ -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Music Assistant Player needs to connect to your local Music Assistant server to play and control music.</string>
+    <!-- Bonjour services (if using service discovery later) -->
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_musicassistant._tcp</string>
+        <string>_http._tcp</string>
+    </array>
 </dict>
 </plist>
