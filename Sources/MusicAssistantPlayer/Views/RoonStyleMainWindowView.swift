@@ -99,6 +99,10 @@ struct RoonStyleMainWindowView: View {
                                 Task {
                                     await libraryViewModel.loadContent()
                                 }
+                                // Switch to library view when a category is selected
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    centerViewMode = .library
+                                }
                             }
                         }
 

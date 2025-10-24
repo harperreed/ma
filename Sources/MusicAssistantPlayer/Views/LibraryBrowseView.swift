@@ -15,25 +15,13 @@ struct LibraryBrowseView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with search and connection status
+            // Header with search
             HStack(spacing: 12) {
                 // Search bar - now with debouncing handled in ViewModel
                 SearchBar(
                     text: $viewModel.searchQuery,
                     placeholder: "Search \(viewModel.selectedCategory.displayName.lowercased())..."
                 )
-
-                // Connection status indicator (if provided)
-                if let host = serverHost, let port = serverPort, let state = connectionState,
-                   let disconnect = onDisconnect, let changeServer = onChangeServer {
-                    ConnectionStatusIndicator(
-                        serverHost: host,
-                        serverPort: port,
-                        connectionState: state,
-                        onDisconnect: disconnect,
-                        onChangeServer: changeServer
-                    )
-                }
             }
             .padding()
 
@@ -153,7 +141,7 @@ struct LibraryBrowseView: View {
                 // Main library view
                 switch viewModel.selectedCategory {
                 case .artists:
-                    ArtistsGridView(
+                    ArtistsListView(
                         artists: viewModel.artists,
                         onPlayNow: { onPlayNow($0.id, .artist) },
                         onAddToQueue: { onAddToQueue($0.id, .artist) },
