@@ -30,7 +30,6 @@ struct RoonStyleMainWindowView: View {
     @State private var isLibrarySidebarVisible: Bool = true
     @State private var playerUpdateTask: Task<Void, Never>?
     @State private var selectedLibraryCategory: LibraryCategory? = .artists
-    @State private var connectionState: ConnectionState = .connected
 
     // MARK: - Layout Constants
     private enum LayoutConstants {
@@ -220,7 +219,7 @@ struct RoonStyleMainWindowView: View {
                 ConnectionStatusIndicator(
                     serverHost: serverConfig.host,
                     serverPort: serverConfig.port,
-                    connectionState: connectionState,
+                    connectionState: playerService.connectionState,
                     onDisconnect: onDisconnect,
                     onChangeServer: onChangeServer
                 )
