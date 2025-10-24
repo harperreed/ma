@@ -348,8 +348,6 @@ struct RoonStyleMainWindowView: View {
             }
 
             await MainActor.run {
-                self.availablePlayers = allPlayers
-
                 // Log available players for debugging
                 AppLogger.network.debug("Available players:")
                 for player in allPlayers {
@@ -370,6 +368,14 @@ struct RoonStyleMainWindowView: View {
                     self.selectedPlayer = first
                     self.playerService.selectedPlayer = first
                 }
+
+                // Reorder players list to put selected player at the top
+                if let selected = self.selectedPlayer {
+                    allPlayers.removeAll(where: { $0.id == selected.id })
+                    allPlayers.insert(selected, at: 0)
+                }
+
+                self.availablePlayers = allPlayers
 
                 // Fetch initial state and queue for selected player
                 if let player = selectedPlayer {
@@ -421,8 +427,6 @@ struct RoonStyleMainWindowView: View {
             }
 
             await MainActor.run {
-                self.availablePlayers = allPlayers
-
                 // Update selected player if it still exists
                 if let currentlySelected = selectedPlayer,
                    let updatedPlayer = allPlayers.first(where: { $0.id == currentlySelected.id }) {
@@ -448,6 +452,14 @@ struct RoonStyleMainWindowView: View {
                         self.playerService.selectedPlayer = nil
                     }
                 }
+
+                // Reorder players list to put selected player at the top
+                if let selected = self.selectedPlayer {
+                    allPlayers.removeAll(where: { $0.id == selected.id })
+                    allPlayers.insert(selected, at: 0)
+                }
+
+                self.availablePlayers = allPlayers
             }
         } catch {
             AppLogger.network.error("Failed to refresh players: \(error.localizedDescription)")
@@ -459,6 +471,12 @@ struct RoonStyleMainWindowView: View {
     private func handlePlayerSelection(_ player: Player) {
         selectedPlayer = player
         playerService.selectedPlayer = player
+
+        // Reorder players list to put selected player at the top
+        var reorderedPlayers = availablePlayers
+        reorderedPlayers.removeAll(where: { $0.id == player.id })
+        reorderedPlayers.insert(player, at: 0)
+        availablePlayers = reorderedPlayers
 
         Task {
             // Fetch initial player state
