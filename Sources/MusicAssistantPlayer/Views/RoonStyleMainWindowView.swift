@@ -247,7 +247,12 @@ struct RoonStyleMainWindowView: View {
             LibraryBrowseView(
                 viewModel: libraryViewModel,
                 onPlayNow: handlePlayNow,
-                onAddToQueue: handleAddToQueue
+                onAddToQueue: handleAddToQueue,
+                serverHost: serverConfig.host,
+                serverPort: serverConfig.port,
+                connectionState: playerService.connectionState,
+                onDisconnect: onDisconnect,
+                onChangeServer: onChangeServer
             )
         }
         .background(Color.black)

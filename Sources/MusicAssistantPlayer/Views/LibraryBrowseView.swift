@@ -7,14 +7,34 @@ struct LibraryBrowseView: View {
     @ObservedObject var viewModel: LibraryViewModel
     let onPlayNow: (String, LibraryItemType) -> Void
     let onAddToQueue: (String, LibraryItemType) -> Void
+    let serverHost: String?
+    let serverPort: Int?
+    let connectionState: ConnectionState?
+    let onDisconnect: (() -> Void)?
+    let onChangeServer: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar - now with debouncing handled in ViewModel
-            SearchBar(
-                text: $viewModel.searchQuery,
-                placeholder: "Search \(viewModel.selectedCategory.displayName.lowercased())..."
-            )
+            // Header with search and connection status
+            HStack(spacing: 12) {
+                // Search bar - now with debouncing handled in ViewModel
+                SearchBar(
+                    text: $viewModel.searchQuery,
+                    placeholder: "Search \(viewModel.selectedCategory.displayName.lowercased())..."
+                )
+
+                // Connection status indicator (if provided)
+                if let host = serverHost, let port = serverPort, let state = connectionState,
+                   let disconnect = onDisconnect, let changeServer = onChangeServer {
+                    ConnectionStatusIndicator(
+                        serverHost: host,
+                        serverPort: port,
+                        connectionState: state,
+                        onDisconnect: disconnect,
+                        onChangeServer: changeServer
+                    )
+                }
+            }
             .padding()
 
             // Sort and Filter toolbar
@@ -297,6 +317,11 @@ struct ErrorView: View {
     LibraryBrowseView(
         viewModel: viewModel,
         onPlayNow: { _, _ in },
-        onAddToQueue: { _, _ in }
+        onAddToQueue: { _, _ in },
+        serverHost: "localhost",
+        serverPort: 8095,
+        connectionState: .connected,
+        onDisconnect: {},
+        onChangeServer: {}
     )
 }
