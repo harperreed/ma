@@ -333,8 +333,9 @@ struct RoonStyleMainWindowView: View {
                 allPlayers = PlayerMapper.parsePlayers(from: result)
             }
 
-            // Add StreamingPlayer to the list if it has been registered
-            if let playerId = await streamingPlayer.currentPlayerId {
+            // Add StreamingPlayer to the list if it has been registered and not already present
+            if let playerId = await streamingPlayer.currentPlayerId,
+               !allPlayers.contains(where: { $0.id == playerId }) {
                 let streamingPlayerModel = Player(
                     id: playerId,
                     name: "Music Assistant Player",
@@ -412,8 +413,9 @@ struct RoonStyleMainWindowView: View {
                 allPlayers = PlayerMapper.parsePlayers(from: result)
             }
 
-            // Add StreamingPlayer to the list if it has been registered
-            if let playerId = await streamingPlayer.currentPlayerId {
+            // Add StreamingPlayer to the list if it has been registered and not already present
+            if let playerId = await streamingPlayer.currentPlayerId,
+               !allPlayers.contains(where: { $0.id == playerId }) {
                 let streamingPlayerModel = Player(
                     id: playerId,
                     name: "Music Assistant Player",
