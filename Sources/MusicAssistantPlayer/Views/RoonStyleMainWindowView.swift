@@ -8,7 +8,8 @@ import os.log
 struct RoonStyleMainWindowView: View {
     let client: MusicAssistantClient
     let serverConfig: ServerConfig
-    let streamingPlayer: StreamingPlayer
+    let streamingPlayer: StreamingPlayer?
+    let resonateKitService: ResonateKitService
     let onDisconnect: () -> Void
     let onChangeServer: () -> Void
 
@@ -45,13 +46,15 @@ struct RoonStyleMainWindowView: View {
     init(
         client: MusicAssistantClient,
         serverConfig: ServerConfig,
-        streamingPlayer: StreamingPlayer,
+        streamingPlayer: StreamingPlayer?,
+        resonateKitService: ResonateKitService,
         onDisconnect: @escaping () -> Void,
         onChangeServer: @escaping () -> Void
     ) {
         self.client = client
         self.serverConfig = serverConfig
         self.streamingPlayer = streamingPlayer
+        self.resonateKitService = resonateKitService
         self.onDisconnect = onDisconnect
         self.onChangeServer = onChangeServer
 
@@ -334,7 +337,8 @@ struct RoonStyleMainWindowView: View {
             }
 
             // Add StreamingPlayer to the list if it has been registered and not already present
-            if let playerId = await streamingPlayer.currentPlayerId,
+            if let streamingPlayer = streamingPlayer,
+               let playerId = await streamingPlayer.currentPlayerId,
                !allPlayers.contains(where: { $0.id == playerId }) {
                 let streamingPlayerModel = Player(
                     id: playerId,
@@ -414,7 +418,8 @@ struct RoonStyleMainWindowView: View {
             }
 
             // Add StreamingPlayer to the list if it has been registered and not already present
-            if let playerId = await streamingPlayer.currentPlayerId,
+            if let streamingPlayer = streamingPlayer,
+               let playerId = await streamingPlayer.currentPlayerId,
                !allPlayers.contains(where: { $0.id == playerId }) {
                 let streamingPlayerModel = Player(
                     id: playerId,
@@ -581,6 +586,7 @@ struct RoonStyleMainWindowView: View {
         client: client,
         serverConfig: config,
         streamingPlayer: player,
+        resonateKitService: ResonateKitService(),
         onDisconnect: {},
         onChangeServer: {}
     )

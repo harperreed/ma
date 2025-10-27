@@ -4,22 +4,26 @@
 import SwiftUI
 import MusicAssistantKit
 import AppIntents
+import AppKit
 
 @main
 struct MusicAssistantPlayerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var serverConfig: ServerConfig? = ServerConfig.load()
     @State private var client: MusicAssistantClient?
     @State private var streamingPlayer: StreamingPlayer?
+    @State private var resonateKitService: ResonateKitService = ResonateKitService()
     @State private var showSetup: Bool = false
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let config = serverConfig, let client = client, let streamingPlayer = streamingPlayer {
+                if let config = serverConfig, let client = client {
                     RoonStyleMainWindowView(
                         client: client,
                         serverConfig: config,
                         streamingPlayer: streamingPlayer,
+                        resonateKitService: resonateKitService,
                         onDisconnect: disconnectServer,
                         onChangeServer: changeServer
                     )
@@ -37,6 +41,11 @@ struct MusicAssistantPlayerApp: App {
             }
         }
         .windowStyle(.hiddenTitleBar)
+
+        Settings {
+            SettingsView()
+        }
+
         .commands {
             CommandGroup(replacing: .newItem) { }
 
@@ -83,6 +92,11 @@ struct MusicAssistantPlayerApp: App {
         AppLogger.ui.info("🔌 Disconnecting from server")
 
         Task {
+            // Disconnect ResonateKit if active
+            if resonateKitService.isEnabled {
+                await resonateKitService.disable()
+            }
+
             // Disconnect current client gracefully
             if let client = client {
                 await client.disconnect()
@@ -109,32 +123,47 @@ struct MusicAssistantPlayerApp: App {
 
     private func handleConnection(config: ServerConfig) {
         let newClient = MusicAssistantClient(host: config.host, port: config.port)
+        let appSettings = AppSettings.load()
 
         Task {
             do {
                 try await newClient.connect()
                 AppLogger.network.info("Successfully connected to Music Assistant server at \(config.host):\(config.port)")
 
-                // Create and register StreamingPlayer
-                let player = StreamingPlayer(client: newClient, playerName: "Music Assistant Player")
+                // Check if ResonateKit is enabled
+                if appSettings.resonateKitEnabled {
+                    AppLogger.network.info("🎵 ResonateKit enabled - starting discovery instead of StreamingPlayer")
 
-                do {
-                    try await player.register()
-                    AppLogger.network.info("StreamingPlayer successfully registered")
+                    // Enable ResonateKit
+                    await resonateKitService.enable()
 
-                    // Only set state variables after both connection AND registration succeed
+                    // Set client for library browsing, queue management, etc.
                     await MainActor.run {
-                        self.streamingPlayer = player
                         self.client = newClient
+                        self.streamingPlayer = nil // No StreamingPlayer when using ResonateKit
                     }
-                } catch {
-                    AppLogger.errors.logError(error, context: "StreamingPlayer registration failed")
-                    // Disconnect client and clear state on registration failure
-                    await newClient.disconnect()
-                    await MainActor.run {
-                        self.client = nil
-                        self.streamingPlayer = nil
-                        self.serverConfig = nil
+                } else {
+                    // Create and register StreamingPlayer (traditional mode)
+                    let player = StreamingPlayer(client: newClient, playerName: "Music Assistant Player")
+
+                    do {
+                        try await player.register()
+                        AppLogger.network.info("StreamingPlayer successfully registered")
+
+                        // Only set state variables after both connection AND registration succeed
+                        await MainActor.run {
+                            self.streamingPlayer = player
+                            self.client = newClient
+                        }
+                    } catch {
+                        AppLogger.errors.logError(error, context: "StreamingPlayer registration failed")
+                        // Disconnect client and clear state on registration failure
+                        await newClient.disconnect()
+                        await MainActor.run {
+                            self.client = nil
+                            self.streamingPlayer = nil
+                            self.serverConfig = nil
+                        }
                     }
                 }
             } catch {
@@ -147,6 +176,24 @@ struct MusicAssistantPlayerApp: App {
                 }
             }
         }
+    }
+}
+
+// MARK: - App Delegate
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Bring app to front and activate
+        NSApp.activate(ignoringOtherApps: true)
+
+        // Bring all windows to front
+        for window in NSApp.windows {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
     }
 }
 

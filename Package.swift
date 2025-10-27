@@ -13,12 +13,16 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/harperreed/MusicAssistantKit.git", from: "0.3.0")
+        .package(url: "https://github.com/harperreed/MusicAssistantKit.git", from: "0.3.0"),
+        .package(url: "https://github.com/harperreed/ResonateKit.git", from: "0.1.0")
     ],
     targets: [
         .executableTarget(
             name: "MusicAssistantPlayer",
-            dependencies: ["MusicAssistantKit"],
+            dependencies: [
+                "MusicAssistantKit",
+                "ResonateKit"
+            ],
             path: "Sources/MusicAssistantPlayer"
         ),
         .testTarget(
