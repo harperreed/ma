@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/harperreed/ResonateKit.git",
       "state" : {
-        "revision" : "e7f9c65a187ef7a6c496887fa7a702751a0c904c",
-        "version" : "0.3.3"
+        "revision" : "0fa8ba54b5df11a768d67a61ee6c73263d10c709",
+        "version" : "0.3.4"
       }
     },
     {
