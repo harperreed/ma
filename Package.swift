@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/harperreed/MusicAssistantKit.git", from: "0.3.0"),
-        .package(url: "https://github.com/harperreed/ResonateKit.git", from: "0.1.0")
+        .package(url: "https://github.com/harperreed/ResonateKit.git", from: "0.3.4")
     ],
     targets: [
         .executableTarget(
