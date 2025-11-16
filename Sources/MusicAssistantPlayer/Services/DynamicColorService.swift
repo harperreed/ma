@@ -4,14 +4,22 @@
 import SwiftUI
 import Combine
 
-struct ExtractedColors: Equatable {
-    let dominant: Color
-    let vibrant: Color
-    let muted: Color
-    let lightAccent: Color
-    let darkAccent: Color
+public struct ExtractedColors: Equatable {
+    public let dominant: Color
+    public let vibrant: Color
+    public let muted: Color
+    public let lightAccent: Color
+    public let darkAccent: Color
 
-    static let fallback = ExtractedColors(
+    public init(dominant: Color, vibrant: Color, muted: Color, lightAccent: Color, darkAccent: Color) {
+        self.dominant = dominant
+        self.vibrant = vibrant
+        self.muted = muted
+        self.lightAccent = lightAccent
+        self.darkAccent = darkAccent
+    }
+
+    public static let fallback = ExtractedColors(
         dominant: Color(white: 0.15),
         vibrant: Color(white: 0.25),
         muted: Color(white: 0.1),

@@ -6,6 +6,7 @@ import SwiftUI
 struct SeekableProgressBar: View {
     let progress: TimeInterval
     let duration: TimeInterval
+    let colors: ExtractedColors
     let onSeek: (TimeInterval) -> Void
 
     @State private var isDragging = false
@@ -25,15 +26,21 @@ struct SeekableProgressBar: View {
                         .fill(Color.white.opacity(0.2))
                         .frame(height: 4)
 
-                    // Progress fill
+                    // Progress fill with gradient
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.white)
+                        .fill(
+                            LinearGradient(
+                                colors: [colors.vibrant, colors.vibrant.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .frame(width: progressWidth(geometry: geometry), height: 4)
 
                     // Scrubber handle (visible when dragging or hovering)
                     if isDragging || isHovering {
                         Circle()
-                            .fill(Color.white)
+                            .fill(colors.vibrant)
                             .frame(width: 12, height: 12)
                             .offset(x: progressWidth(geometry: geometry) - 6)
                     }
@@ -94,6 +101,7 @@ struct SeekableProgressBar: View {
         SeekableProgressBar(
             progress: 120,
             duration: 240,
+            colors: ExtractedColors.fallback,
             onSeek: { _ in }
         )
         .padding()

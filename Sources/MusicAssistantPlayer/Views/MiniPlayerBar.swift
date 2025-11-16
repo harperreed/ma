@@ -11,12 +11,30 @@ struct MiniPlayerBar: View {
     let onExpand: () -> Void
     let onPlayerSelection: (Player) -> Void
 
-    private let barHeight: CGFloat = 90
+    @Environment(\.dynamicColorService) var colorService
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+
+    private var glassMaterial: some View {
+        ZStack {
+            Color.clear
+                .background(.ultraThinMaterial)
+
+            colorService.currentColors.muted
+                .opacity(0.25)
+        }
+    }
+
+    private var topBorder: some View {
+        Rectangle()
+            .fill(colorService.currentColors.vibrant.opacity(0.15))
+            .frame(height: 1)
+            .shadow(color: colorService.currentColors.vibrant.opacity(0.05), radius: 8, y: -2)
+    }
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Left: Artwork + Track Info + Player Selector
-            HStack(spacing: 12) {
+        HStack(spacing: DesignSystem.Spacing.md) {
+            // Left Zone: Artwork + Track Info + Player Selector (420px)
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 // Artwork (clickable to expand)
                 Button(action: onExpand) {
                     if let artworkURL = nowPlayingViewModel.artworkURL {
@@ -24,46 +42,47 @@ struct MiniPlayerBar: View {
                             switch phase {
                             case .empty:
                                 Color.gray.opacity(0.3)
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(4)
+                                    .frame(width: 64, height: 64)
+                                    .cornerRadius(DesignSystem.CornerRadius.tight)
                             case .success(let image):
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(4)
+                                    .frame(width: 64, height: 64)
+                                    .cornerRadius(DesignSystem.CornerRadius.tight)
                             case .failure:
                                 Color.gray.opacity(0.3)
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(4)
+                                    .frame(width: 64, height: 64)
+                                    .cornerRadius(DesignSystem.CornerRadius.tight)
                             @unknown default:
                                 Color.gray.opacity(0.3)
-                                    .frame(width: 60, height: 60)
-                                    .cornerRadius(4)
+                                    .frame(width: 64, height: 64)
+                                    .cornerRadius(DesignSystem.CornerRadius.tight)
                             }
                         }
                     } else {
                         Color.gray.opacity(0.3)
-                            .frame(width: 60, height: 60)
-                            .cornerRadius(4)
+                            .frame(width: 64, height: 64)
+                            .cornerRadius(DesignSystem.CornerRadius.tight)
                     }
                 }
                 .buttonStyle(.plain)
 
                 // Track info (clickable to expand)
                 Button(action: onExpand) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                         Text(nowPlayingViewModel.trackTitle)
-                            .font(.system(size: 14, weight: .medium))
+                            .font(DesignSystem.Typography.body)
+                            .fontWeight(.medium)
                             .foregroundColor(.white)
                             .lineLimit(1)
 
                         Text(nowPlayingViewModel.artistName)
-                            .font(.system(size: 12))
+                            .font(DesignSystem.Typography.caption)
                             .foregroundColor(.white.opacity(0.7))
                             .lineLimit(1)
                     }
-                    .frame(width: 200, alignment: .leading)
+                    .frame(width: 240, alignment: .leading)
                 }
                 .buttonStyle(.plain)
 
@@ -80,25 +99,25 @@ struct MiniPlayerBar: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignSystem.Spacing.xxs) {
                         Image(systemName: "speaker.wave.2")
-                            .font(.system(size: 12))
+                            .font(DesignSystem.Typography.caption)
                         Text(selectedPlayer?.name ?? "No Player")
-                            .font(.system(size: 12))
+                            .font(DesignSystem.Typography.caption)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10))
                     }
                     .foregroundColor(.white.opacity(0.7))
                 }
             }
-            .frame(width: 400, alignment: .leading)
+            .frame(width: 420, alignment: .leading)
 
             Spacer()
 
-            // Center: Transport controls with progress scrubber below (Spotify-style)
-            VStack(spacing: 8) {
+            // Center Zone: Transport controls with progress scrubber below (min 480px)
+            VStack(spacing: DesignSystem.Spacing.xs) {
                 // Transport controls
-                HStack(spacing: 20) {
+                HStack(spacing: DesignSystem.Spacing.lg) {
                     Button(action: { nowPlayingViewModel.skipPrevious() }) {
                         Image(systemName: "backward.fill")
                             .font(.system(size: 18))
@@ -134,30 +153,67 @@ struct MiniPlayerBar: View {
                 SeekableProgressBar(
                     progress: nowPlayingViewModel.progress,
                     duration: nowPlayingViewModel.duration,
+                    colors: colorService.currentColors,
                     onSeek: { time in
                         nowPlayingViewModel.seek(to: time)
                     }
                 )
-                .frame(width: 400)
+                .frame(minWidth: 480)
             }
 
             Spacer()
 
-            // Right: Volume control
-            VolumeControl(
-                volume: Binding(
-                    get: { nowPlayingViewModel.volume },
-                    set: { nowPlayingViewModel.volume = $0 }
-                ),
-                onVolumeChange: { volume in
-                    nowPlayingViewModel.setVolume(volume)
+            // Right Zone: Secondary controls + Volume (240px)
+            HStack(spacing: DesignSystem.Spacing.sm) {
+                // Secondary controls
+                HStack(spacing: DesignSystem.Spacing.xs) {
+                    Button(action: { nowPlayingViewModel.toggleShuffle() }) {
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 14))
+                            .foregroundColor(nowPlayingViewModel.isShuffled ? colorService.currentColors.vibrant : .white.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
+
+                    Button(action: { nowPlayingViewModel.toggleLike() }) {
+                        Image(systemName: nowPlayingViewModel.isLiked ? "heart.fill" : "heart")
+                            .font(.system(size: 14))
+                            .foregroundColor(nowPlayingViewModel.isLiked ? colorService.currentColors.vibrant : .white.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
+
+                    Button(action: { nowPlayingViewModel.cycleRepeatMode() }) {
+                        Image(systemName: nowPlayingViewModel.repeatMode == .one ? "repeat.1" : "repeat")
+                            .font(.system(size: 14))
+                            .foregroundColor(nowPlayingViewModel.repeatMode != .off ? colorService.currentColors.vibrant : .white.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlayer == nil)
                 }
-            )
-            .frame(width: 200)
+
+                // Volume control
+                VolumeControl(
+                    volume: Binding(
+                        get: { nowPlayingViewModel.volume },
+                        set: { nowPlayingViewModel.volume = $0 }
+                    ),
+                    colors: colorService.currentColors,
+                    onVolumeChange: { volume in
+                        nowPlayingViewModel.setVolume(volume)
+                    }
+                )
+            }
+            .frame(width: 240, alignment: .trailing)
         }
-        .padding(.horizontal, 20)
-        .frame(height: barHeight)
-        .background(Color.black.opacity(0.9))
+        .padding(.horizontal, DesignSystem.Spacing.lg)
+        .frame(height: DesignSystem.Layout.miniPlayerHeight)
+        .background {
+            ZStack(alignment: .top) {
+                glassMaterial
+                topBorder
+            }
+        }
     }
 }
 
