@@ -5,6 +5,7 @@ import SwiftUI
 
 struct VolumeControl: View {
     @Binding var volume: Double
+    let colors: ExtractedColors
     let onVolumeChange: (Double) -> Void
 
     @State private var isEditing = false
@@ -27,8 +28,8 @@ struct VolumeControl: View {
                     debounceTask?.cancel()
                 }
             })
-            .tint(.white)
-            .frame(width: 200)
+            .tint(colors.vibrant)
+            .frame(width: 140)
             .onChange(of: volume) { oldValue, newValue in
                 // Only track changes during user interaction
                 guard isEditing else { return }
@@ -55,8 +56,8 @@ struct VolumeControl: View {
 
 #Preview {
     VStack {
-        VolumeControl(volume: .constant(50), onVolumeChange: { _ in })
-        VolumeControl(volume: .constant(75), onVolumeChange: { _ in })
+        VolumeControl(volume: .constant(50), colors: ExtractedColors.fallback, onVolumeChange: { _ in })
+        VolumeControl(volume: .constant(75), colors: ExtractedColors.fallback, onVolumeChange: { _ in })
     }
     .padding()
     .background(Color.black)

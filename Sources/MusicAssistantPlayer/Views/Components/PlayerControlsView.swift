@@ -23,6 +23,8 @@ struct PlayerControlsView: View {
     let onLike: () -> Void
     let onRepeat: () -> Void
 
+    @Environment(\.dynamicColorService) var colorService
+
     var body: some View {
         VStack(spacing: 16) {
             // Secondary controls (shuffle, like, repeat)
@@ -59,6 +61,7 @@ struct PlayerControlsView: View {
             SeekableProgressBar(
                 progress: progress,
                 duration: duration,
+                colors: colorService.currentColors,
                 onSeek: onSeek
             )
             .padding(.horizontal)
@@ -88,7 +91,7 @@ struct PlayerControlsView: View {
             }
 
             // Volume control
-            VolumeControl(volume: $volume, onVolumeChange: onVolumeChange)
+            VolumeControl(volume: $volume, colors: colorService.currentColors, onVolumeChange: onVolumeChange)
         }
         .padding()
     }
