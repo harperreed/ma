@@ -88,6 +88,7 @@ struct RoonStyleMainWindowView: View {
                             providers: libraryService.providers,
                             currentTrackTitle: nowPlayingViewModel.currentTrack?.title,
                             currentArtist: nowPlayingViewModel.currentTrack?.artist,
+                            currentColors: .fallback,
                             onNowPlayingTap: {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     centerViewMode = .expandedNowPlaying

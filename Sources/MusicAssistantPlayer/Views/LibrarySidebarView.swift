@@ -8,6 +8,7 @@ struct LibrarySidebarView: View {
     let providers: [String] // Provider names from Music Assistant
     let currentTrackTitle: String?
     let currentArtist: String?
+    let currentColors: ExtractedColors
     let onNowPlayingTap: () -> Void
 
     @State private var isLibraryExpanded = true
@@ -15,172 +16,194 @@ struct LibrarySidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Now Playing Button
-            Button(action: onNowPlayingTap) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 16))
-                        Text("NOW PLAYING")
-                            .font(.system(size: 11, weight: .semibold))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.white.opacity(0.5))
-
-                    if let title = currentTrackTitle {
-                        Text(title)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-
-                        if let artist = currentArtist {
-                            Text(artist)
-                                .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.6))
-                                .lineLimit(1)
-                        }
-                    } else {
-                        Text("No track playing")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.4))
-                    }
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.05))
-                .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            // Now Playing Card
+            nowPlayingCard
+                .padding(.horizontal, DesignSystem.Spacing.sm)
+                .padding(.top, DesignSystem.Spacing.sm)
+                .padding(.bottom, DesignSystem.Spacing.xs)
 
             Divider()
-                .background(Color.white.opacity(0.1))
-                .padding(.vertical, 8)
+                .background(currentColors.vibrant.opacity(0.2))
+                .padding(.vertical, DesignSystem.Spacing.xs)
 
             // Library Section
             DisclosureGroup(
                 isExpanded: $isLibraryExpanded,
                 content: {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                         ForEach(LibraryCategory.allCases) { category in
                             CategoryButton(
                                 category: category,
                                 isSelected: selectedCategory == category,
+                                colors: currentColors,
                                 action: { selectedCategory = category }
                             )
                         }
                     }
-                    .padding(.leading, 8)
-                    .padding(.top, 8)
+                    .padding(.leading, DesignSystem.Spacing.xs)
+                    .padding(.top, DesignSystem.Spacing.xs)
                 },
                 label: {
                     Text("LIBRARY")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(DesignSystem.Typography.label)
                         .foregroundColor(.white.opacity(0.5))
-                        .padding(.vertical, 8)
+                        .padding(.vertical, DesignSystem.Spacing.xs)
                 }
             )
-            .padding(.horizontal, 12)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
 
             Divider()
-                .background(Color.white.opacity(0.1))
-                .padding(.vertical, 8)
+                .background(currentColors.vibrant.opacity(0.2))
+                .padding(.vertical, DesignSystem.Spacing.xs)
 
             // Providers Section
             DisclosureGroup(
                 isExpanded: $isProvidersExpanded,
                 content: {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
                         ForEach(providers, id: \.self) { provider in
                             ProviderButton(
                                 name: provider,
+                                colors: currentColors,
                                 action: {
                                     // TODO: Implement provider filtering
                                 }
                             )
                         }
                     }
-                    .padding(.leading, 8)
-                    .padding(.top, 8)
+                    .padding(.leading, DesignSystem.Spacing.xs)
+                    .padding(.top, DesignSystem.Spacing.xs)
                 },
                 label: {
                     Text("PROVIDERS")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(DesignSystem.Typography.label)
                         .foregroundColor(.white.opacity(0.5))
-                        .padding(.vertical, 8)
+                        .padding(.vertical, DesignSystem.Spacing.xs)
                 }
             )
-            .padding(.horizontal, 12)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.black)
     }
+
+    // MARK: - Now Playing Card
+
+    private var nowPlayingCard: some View {
+        Button(action: onNowPlayingTap) {
+            GlassCard(colors: currentColors) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                    HStack {
+                        Image(systemName: "music.note")
+                            .font(DesignSystem.Typography.body)
+                        Text("NOW PLAYING")
+                            .font(DesignSystem.Typography.label)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(DesignSystem.Typography.caption)
+                    }
+                    .foregroundColor(.white.opacity(0.5))
+
+                    if let title = currentTrackTitle {
+                        Text(title)
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        if let artist = currentArtist {
+                            Text(artist)
+                                .font(DesignSystem.Typography.label)
+                                .foregroundColor(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                    } else {
+                        Text("No track playing")
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+                .padding(DesignSystem.Spacing.sm)
+            }
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 struct CategoryButton: View {
     let category: LibraryCategory
     let isSelected: Bool
+    let colors: ExtractedColors
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 Image(systemName: category.iconName)
-                    .font(.system(size: 14))
+                    .font(DesignSystem.Typography.body)
                     .frame(width: 16)
 
                 Text(category.displayName)
-                    .font(.system(size: 13))
+                    .font(DesignSystem.Typography.body)
 
                 Spacer()
             }
             .foregroundColor(isSelected ? .white : .white.opacity(0.7))
             .padding(.vertical, 6)
-            .padding(.horizontal, 12)
-            .background(isSelected ? Color.white.opacity(0.1) : Color.clear)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
+            .background(
+                isSelected ? colors.vibrant.opacity(0.2) : Color.clear
+            )
             .cornerRadius(6)
+            .overlay(
+                isSelected ?
+                    Rectangle()
+                        .fill(colors.vibrant)
+                        .frame(width: 2)
+                        .cornerRadius(1)
+                    : nil,
+                alignment: .leading
+            )
         }
         .buttonStyle(.plain)
+        .animation(.easeOut(duration: DesignSystem.Animation.quick), value: isSelected)
     }
 }
 
 struct ProviderButton: View {
     let name: String
+    let colors: ExtractedColors
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: DesignSystem.Spacing.sm) {
                 Image(systemName: "music.note.house")
-                    .font(.system(size: 14))
+                    .font(DesignSystem.Typography.body)
                     .frame(width: 16)
 
                 Text(name)
-                    .font(.system(size: 13))
+                    .font(DesignSystem.Typography.body)
 
                 Spacer()
             }
             .foregroundColor(.white.opacity(0.7))
             .padding(.vertical, 6)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, DesignSystem.Spacing.sm)
         }
         .buttonStyle(.plain)
     }
 }
 
-#Preview {
-    LibrarySidebarView(
-        selectedCategory: .constant(.artists),
-        providers: ["Spotify", "Tidal", "Local Files"],
-        currentTrackTitle: "Song Title",
-        currentArtist: "Artist Name",
-        onNowPlayingTap: {}
-    )
-    .frame(width: 200, height: 600)
-}
+// #Preview {
+//     LibrarySidebarView(
+//         selectedCategory: .constant(.artists),
+//         providers: ["Spotify", "Tidal", "Local Files"],
+//         currentTrackTitle: "Song Title",
+//         currentArtist: "Artist Name",
+//         currentColors: .fallback,
+//         onNowPlayingTap: {}
+//     )
+//     .frame(height: 600)
+// }
