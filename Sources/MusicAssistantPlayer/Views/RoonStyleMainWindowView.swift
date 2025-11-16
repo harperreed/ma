@@ -18,6 +18,7 @@ struct RoonStyleMainWindowView: View {
     @StateObject private var queueService: QueueService
     @StateObject private var libraryService: LibraryService
     @StateObject private var imageCacheService: ImageCacheService
+    @StateObject private var dynamicColorService = DynamicColorService()
 
     // MARK: - ViewModels
     @StateObject private var nowPlayingViewModel: NowPlayingViewModel
@@ -88,7 +89,7 @@ struct RoonStyleMainWindowView: View {
                             providers: libraryService.providers,
                             currentTrackTitle: nowPlayingViewModel.currentTrack?.title,
                             currentArtist: nowPlayingViewModel.currentTrack?.artist,
-                            currentColors: .fallback,
+                            currentColors: dynamicColorService.currentColors,
                             onNowPlayingTap: {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     centerViewMode = .expandedNowPlaying
@@ -184,8 +185,14 @@ struct RoonStyleMainWindowView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
         }
+        .environment(\.dynamicColorService, dynamicColorService)
         .task {
             await initializeServices()
+        }
+        .onChange(of: nowPlayingViewModel.artworkURL) { _, newURL in
+            Task {
+                await dynamicColorService.extractColors(from: newURL)
+            }
         }
         .onDisappear {
             playerUpdateTask?.cancel()

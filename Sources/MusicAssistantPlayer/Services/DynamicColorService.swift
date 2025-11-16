@@ -4,14 +4,14 @@
 import SwiftUI
 import Combine
 
-public struct ExtractedColors: Equatable {
-    public let dominant: Color
-    public let vibrant: Color
-    public let muted: Color
-    public let lightAccent: Color
-    public let darkAccent: Color
+struct ExtractedColors: Equatable {
+    let dominant: Color
+    let vibrant: Color
+    let muted: Color
+    let lightAccent: Color
+    let darkAccent: Color
 
-    public init(dominant: Color, vibrant: Color, muted: Color, lightAccent: Color, darkAccent: Color) {
+    init(dominant: Color, vibrant: Color, muted: Color, lightAccent: Color, darkAccent: Color) {
         self.dominant = dominant
         self.vibrant = vibrant
         self.muted = muted
@@ -19,7 +19,7 @@ public struct ExtractedColors: Equatable {
         self.darkAccent = darkAccent
     }
 
-    public static let fallback = ExtractedColors(
+    static let fallback = ExtractedColors(
         dominant: Color(white: 0.15),
         vibrant: Color(white: 0.25),
         muted: Color(white: 0.1),
@@ -33,6 +33,8 @@ class DynamicColorService: ObservableObject {
     @Published private(set) var currentColors: ExtractedColors = .fallback
 
     private var colorCache: [URL: ExtractedColors] = [:]
+
+    nonisolated init() {}
 
     func extractColors(from artworkURL: URL?) async {
         guard let artworkURL = artworkURL else {
@@ -58,7 +60,6 @@ class DynamicColorService: ObservableObject {
 
 // MARK: - Environment Key
 
-@MainActor
 struct DynamicColorServiceKey: EnvironmentKey {
     static let defaultValue = DynamicColorService()
 }
