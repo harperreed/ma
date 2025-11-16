@@ -66,4 +66,23 @@ enum DesignSystem {
         static let medium = (color: Color.black.opacity(0.3), radius: CGFloat(8), y: CGFloat(4))
         static let heavy = (color: Color.black.opacity(0.5), radius: CGFloat(16), y: CGFloat(8))
     }
+
+    enum ShadowLevel {
+        case light
+        case medium
+        case heavy
+    }
+}
+
+// MARK: - View Extensions
+
+extension View {
+    func designSystemShadow(_ level: DesignSystem.ShadowLevel) -> some View {
+        let shadow = switch level {
+            case .light: DesignSystem.Shadow.light
+            case .medium: DesignSystem.Shadow.medium
+            case .heavy: DesignSystem.Shadow.heavy
+        }
+        return self.shadow(color: shadow.color, radius: shadow.radius, y: shadow.y)
+    }
 }
